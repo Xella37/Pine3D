@@ -1342,7 +1342,18 @@ local function newFrame(x1, y1, x2, y2)
 
 			local model = object[7]
 
-			local rotatedModel = object[5] and object[5] ~= 0 and rotateModel(model, object[5]) or model
+			local rotY = object[5]
+			if rotY and rotY ~= 0 then
+				model = rotateModelY(model, rotY)
+			end
+			local rotZ = object[6]
+			if rotZ and rotZ ~= 0 then
+				model = rotateModelZ(model, rotZ)
+			end
+			local rotX = object[4]
+			if rotX and rotX ~= 0 then
+				model = rotateModelX(model, rotX)
+			end
 
 			local oX = object[1]
 			local oY = object[2]
@@ -1390,8 +1401,8 @@ local function newFrame(x1, y1, x2, y2)
 				return sX, sY, dX > 0
 			end
 
-			for j = 1, #rotatedModel do
-				local polygon = rotatedModel[j]
+			for j = 1, #model do
+				local polygon = model[j]
 
 				local x1, y1, onScreen1 = map3dTo2d(polygon[1], polygon[2], polygon[3])
 				if onScreen1 then
