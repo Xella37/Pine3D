@@ -1,10 +1,37 @@
 
--- Made by Xella#8655
-
 local path = "/objModels"
 
+local termColors = {}
+for i = 1, 16 do
+    local color = 2 ^ (i - 1)
+    local r, g, b = term.getPaletteColor(color)
+    local char = ("0123456789abcdef"):sub(i, i)
+    termColors[#termColors+1] = {r=r, g=g, b=b, code=char, color=color}
+end
+
+local abs = math.abs
+local function closestCCColor(r, g, b)
+    local closest = termColors[1]
+    if not r or not g or not b then
+        return closest
+    end
+
+    local closestDistance = math.huge
+
+    for i, termColor in pairs(termColors) do
+        local distance = abs(r - termColor.r) + abs(g - termColor.g) + abs(b - termColor.b)
+        if (distance < closestDistance) then
+		    local color = 2 ^ (i - 1)
+            closest = color
+            closestDistance = distance
+        end
+    end
+
+    return closest
+end
+
 local shrink = 1
-function loadTexture(filename)
+local function loadTexture(filename)
 	print("Loading texture " .. filename)
 
 	local textureFile = fs.open(path .. "/" .. filename, "r")
@@ -41,7 +68,6 @@ function loadMTLFile(dir, filename)
 	local materialList = {}
 	local materialMap = {}
 
-	--local materialName = ""
 	local material = {}
 	for line in raw:gmatch("[^\n]+") do
 		local parts = {}
@@ -50,7 +76,6 @@ function loadMTLFile(dir, filename)
 		end
 
 		if parts[1] == "newmtl" then
-			--materialName = parts[2]
 			material = {}
 
 			materialList[#materialList+1] = material
@@ -58,6 +83,12 @@ function loadMTLFile(dir, filename)
 		elseif parts[1] == "map_Kd" then
 			local filename = parts[2]:sub(1, parts[2]:find("%.")-1) .. ".nfp"
 			material.texture = loadTexture(dir .. "/" .. filename)
+		elseif parts[1] == "Kd" then
+			local r = tonumber(parts[2])
+			local g = tonumber(parts[3])
+			local b = tonumber(parts[4])
+			local color = closestCCColor(r, g, b)
+			material.baseColor = color
 		elseif not parts[1]:sub(1, 1) == "#" then
 			if #parts == 2 then
 				material[parts[1]] = parts[2]
@@ -88,11 +119,9 @@ function loadObjFile(id)
 	ShrekFile:close()
 
 	local colorChar = {}
-	local charColor = {}
 	for i = 1, 16 do
 		local color = 2 ^ (i - 1)
 		local char = ("0123456789abcdef"):sub(i, i)
-		colorChar[color] = char
 		colorChar[char] = color
 	end
 
@@ -201,13 +230,17 @@ function loadObjFile(id)
 					local color = texture[height - textureY + 1][textureX]
 					poly.c = colorChar[color] or colors.red
 				else
-					if not materialsWarned[material] then
-						term.setTextColor(colors.orange)
-						print("Warning: no texture found for material \"" .. material .. "\"")
-						term.setTextColor(colors.white)
-						materialsWarned[material] = true
+					if mat.baseColor then
+						poly.c = mat.baseColor
+					else
+						if not materialsWarned[material] then
+							term.setTextColor(colors.orange)
+							print("Warning: no texture found for material \"" .. material .. "\"")
+							term.setTextColor(colors.white)
+							materialsWarned[material] = true
+						end
+						poly.c = colors.red
 					end
-					poly.c = colors.red
 				end
 			end
 
@@ -251,13 +284,17 @@ function loadObjFile(id)
 					local color = texture[height - textureY + 1][textureX]
 					poly.c = colorChar[color] or colors.red
 				else
-					if not materialsWarned[material] then
-						term.setTextColor(colors.orange)
-						print("Warning: no texture found for material \"" .. material .. "\"")
-						term.setTextColor(colors.white)
-						materialsWarned[material] = true
+					if mat.baseColor then
+						poly.c = mat.baseColor
+					else
+						if not materialsWarned[material] then
+							term.setTextColor(colors.orange)
+							print("Warning: no texture found for material \"" .. material .. "\"")
+							term.setTextColor(colors.white)
+							materialsWarned[material] = true
+						end
+						poly.c = colors.red
 					end
-					poly.c = colors.red
 				end
 
 				convertedModel[#convertedModel+1] = poly2

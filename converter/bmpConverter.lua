@@ -32,7 +32,7 @@ end
 
 local huge = math.huge
 local abs = math.abs
-function closestCCColor(r, g, b)
+local function closestCCColor(r, g, b)
     local closest = termColors[1]
     if not r or not g or not b then
         return closest
