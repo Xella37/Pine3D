@@ -200,7 +200,7 @@ end
 local keysDown = {}
 local function keyInput()
 	while true do
-		local event, key, x, y = os.pullEventRaw()
+		local event, key = os.pullEventRaw()
 
 		if event == "key" then
 			keysDown[key] = true

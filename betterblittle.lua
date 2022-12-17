@@ -1,10 +1,6 @@
 
 -- Made by Xella#8655
 
-local width = 2 * 40
-local height = 3 * 15
-
-local ceil = math.ceil
 local floor = math.floor
 local concat = table.concat
 
@@ -13,9 +9,7 @@ for i = 1, 16 do
 	colorChar[2 ^ (i - 1)] = ("0123456789abcdef"):sub(i, i)
 end
 
-local getn = table.getn
-local sort = table.sort
-function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
+local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
     local freq = {}
     freq[p1] = 1
     freq[p2] = (freq[p2] or 0) + 1
@@ -55,7 +49,7 @@ for i = 0, 15 do
 	end
 	relations[math.pow(2, i)] = r
 end
-function colorCloser(target, c1, c2)
+local function colorCloser(target, c1, c2)
 	local r = relations[target]
 	for i = 1, #r do
 		if r[i] == c1 then return true
@@ -70,7 +64,7 @@ for i = 128, 128+31 do
 	allChars[i] = char(i)
 end
 local bxor = bit.bxor
-function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
+local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
 	local cc = colorCloser
 	local charNr = 128
 	if p1 == c1 or p1 ~= c2 and cc(p1, c1, c2) then charNr = charNr + 1 end
@@ -88,7 +82,7 @@ local lookup = {}
 for i = 1, 16 do
 	lookup[2 ^ (i - 1)] = {}
 end
-function drawBuffer(buffer, win)
+local function drawBuffer(buffer, win)
 	local height = #buffer
 	local width = #buffer[1]
 

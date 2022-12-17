@@ -9,7 +9,7 @@ for i = 1, 16 do
 end
 
 local large = math.pow(10, 99)
-function linear(x1, y1, x2, y2)
+local function linear(x1, y1, x2, y2)
 	local dx = x2 - x1
 	if dx == 0 then
 		return large, -large * x1
@@ -23,7 +23,7 @@ local max = math.max
 local floor = math.floor
 local ceil = math.ceil
 
-function newBuffer(x1, y1, x2, y2)
+local function newBuffer(x1, y1, x2, y2)
 	local buffer = {
 		x1 = x1,
 		y1 = y1,
@@ -531,8 +531,6 @@ function newBuffer(x1, y1, x2, y2)
 	return buffer
 end
 
-local pixelratio = 3/2
-
 local sqrt = math.sqrt
 local sort = table.sort
 local function polySorted(polygons)
@@ -569,11 +567,9 @@ local function sortPolygons(polygons, objectX, objectY, objectZ, camera)
 	end
 end
 
-local deg = math.deg
 local rad = math.rad
 local sin = math.sin
 local cos = math.cos
-local atan = math.atan
 local atan2 = math.atan2
 local function rotatePolygonX(x, y, z, rotationX)
 	local angle = atan2(y + 0.0000001, z + 0.0000001)
@@ -705,13 +701,14 @@ local function sortObjects(objects, camera)
 	sort(objects, function(a, b) return a[9] > b[9] end)
 end
 
-function loadModel(path)
+local function loadModel(path)
 	local modelFile = fs.open(path, "r")
 	if not modelFile then
 		error("Could not find model for an object at path: " .. path)
 	end
-	content = modelFile.readAll()
+	local content = modelFile.readAll()
 	modelFile.close()
+
 	return textutils.unserialise(content)
 end
 
@@ -720,10 +717,9 @@ local pi = math.pi
 local sin = math.sin
 local cos = math.cos
 local tan = math.tan
-local atan = math.atan
 local sqrt = math.sqrt
 
-function newFrame(x1, y1, x2, y2)
+local function newFrame(x1, y1, x2, y2)
 	local width, height = term.getSize()
 	if x1 and x2 then
 		width = x2 - x1 + 1
@@ -758,7 +754,7 @@ function newFrame(x1, y1, x2, y2)
     }
 	frame.FoV = 90
 	frame.camera[7] = rad(frame.FoV)
-	frame.t = math.tan(math.rad(frame.FoV / 2)) * 2 * 0.0001
+	frame.t = tan(rad(frame.FoV / 2)) * 2 * 0.0001
 
 	function frame:setBackgroundColor(c)
 		local buff = self.buffer
@@ -1296,7 +1292,7 @@ function newFrame(x1, y1, x2, y2)
 
 	function frame:setFoV(FoV)
 		self.FoV = FoV or 90
-		self.t = math.tan(math.rad(self.FoV / 2)) * 2 * 0.0001
+		self.t = tan(rad(self.FoV / 2)) * 2 * 0.0001
 		self:updateMappingConstants()
 		self.camera[7] = rad(self.FoV)
 	end
@@ -1368,7 +1364,7 @@ function newFrame(x1, y1, x2, y2)
 			local yCameraOffset = oY - camera[2]
 			local zCameraOffset = oZ - camera[3]
 
-			function map3dTo2d(x, y, z)
+			local function map3dTo2d(x, y, z)
 				local dX = x + xCameraOffset
 		        local dY = y + yCameraOffset
 		        local dZ = z + zCameraOffset
@@ -1466,7 +1462,6 @@ function newFrame(x1, y1, x2, y2)
 		local ry = object[2] - camera[2]
 		local rz = object[3] - camera[3]
 
-		local sortedPolygons = {}
 		for i = 1, #objectSolution do
 			local polygonI = objectSolution[i]
 			local polygon = model[polygonI]
@@ -1536,7 +1531,7 @@ function newFrame(x1, y1, x2, y2)
 end
 
 local models = {}
-function newPoly(x1, y1, z1, x2, y2, z2, x3, y3, z3, c)
+local function newPoly(x1, y1, z1, x2, y2, z2, x3, y3, z3, c)
 	return {
 		x1 = x1, y1 = y1, z1 = z1, x2 = x2, y2 = y2, z2 = z2, x3 = x3, y3 = y3, z3 = z3,
 		c = c,
@@ -1644,7 +1639,7 @@ function models:icosphere(options)
 		{0, -phi, 1},
 	}
 
-	function buildPoly(i1, i2, i3)
+	local function buildPoly(i1, i2, i3)
 		return newPoly(v[i1][1], v[i1][2], v[i1][3], v[i2][1], v[i2][2], v[i2][3], v[i3][1], v[i3][2], v[i3][3], options.colors and 1 or options.color)
 	end
 
@@ -1674,7 +1669,7 @@ function models:icosphere(options)
 		buildPoly(10, 8, 7),
 	}
 
-	function subdivide()
+	local function subdivide()
 		local newModel = {}
 		for i = 1, #model do
 			local poly = model[i]
@@ -1696,7 +1691,7 @@ function models:icosphere(options)
 			}
 
 			local nextColor = poly.c
-			if (options.colorsFractal) then
+			if options.colorsFractal then
 				nextColor = (nextColor % #options.colors) + 1
 			end
 
@@ -1712,7 +1707,7 @@ function models:icosphere(options)
 		subdivide()
 	end
 
-	function forceLength(x, y, z)
+	local function forceLength(x, y, z)
 		local length = math.sqrt(x*x + y*y + z*z)
 		local ratio = 0.5 / length
 		return x*ratio, y*ratio, z*ratio
