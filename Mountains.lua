@@ -1,7 +1,7 @@
 
 -- Made by Xella#8655
 
-local Pine3D = require("Pine3d")
+local Pine3D = require("Pine3D")
 local noise = require("noise")
 
 local genOptions = {
