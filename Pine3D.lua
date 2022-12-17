@@ -1,7 +1,8 @@
 
 -- Made by Xella#8655
 
-local betterblittle = require("betterblittle")
+local libFolder = shell.dir()
+local betterblittle = require(libFolder .. "betterblittle")
 
 local colorChar = {}
 for i = 1, 16 do
