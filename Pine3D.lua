@@ -1,7 +1,7 @@
 
 -- Made by Xella#8655
 
-local libFolder = shell.dir()
+local libFolder = (...):match("(.-)[^%.]+$")
 local betterblittle = require(libFolder .. "betterblittle")
 
 local colorChar = {}
