@@ -640,6 +640,7 @@ local function rotateModelX(model, rotationX)
 		rotatedModel[#rotatedModel][12] = polygon[12]
 		rotatedModel[#rotatedModel][13] = polygon[13]
 		rotatedModel[#rotatedModel][14] = polygon[14]
+		rotatedModel[#rotatedModel][15] = polygon[15]
 	end
 
 	return rotatedModel
@@ -658,6 +659,7 @@ local function rotateModelY(model, rotationY)
 		rotatedModel[#rotatedModel][12] = polygon[12]
 		rotatedModel[#rotatedModel][13] = polygon[13]
 		rotatedModel[#rotatedModel][14] = polygon[14]
+		rotatedModel[#rotatedModel][15] = polygon[15]
 	end
 
 	return rotatedModel
@@ -676,6 +678,7 @@ local function rotateModelZ(model, rotationZ)
 		rotatedModel[#rotatedModel][12] = polygon[12]
 		rotatedModel[#rotatedModel][13] = polygon[13]
 		rotatedModel[#rotatedModel][14] = polygon[14]
+		rotatedModel[#rotatedModel][15] = polygon[15]
 	end
 
 	return rotatedModel
