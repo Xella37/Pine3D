@@ -963,30 +963,7 @@ local function newFrame(x1, y1, x2, y2)
 		local yCameraOffset = yCameraOffset
 		local zCameraOffset = zCameraOffset
 
-		local function map3dTo2dFull(x, y, z)
-			local dX = x + xCameraOffset
-	        local dY = y + yCameraOffset
-	        local dZ = z + zCameraOffset
-
-			local dX2 = cA4 * dX - cA3 * dZ
-			dZ = cA3 * dX + cA4 * dZ
-			dX = dX2
-
-			local dY2 = cA6 * dY - cA5 * dX
-			dX = cA5 * dY + cA6 * dX
-			dY = dY2
-
-			local sX = (dZ / dX) * sXFactor + renderOffsetX
-			local sY = (dY / dX) * sYFactor + renderOffsetY
-
-			return sX, sY, dX, dY, dZ
-		end
-
-		local function map3dTo2d(x, y, z)
-			local dX = x + xCameraOffset
-	        local dY = y + yCameraOffset
-	        local dZ = z + zCameraOffset
-
+		local function map3dTo2d(dX, dY, dZ)
 			local dX2 = cA4 * dX - cA3 * dZ
 			dZ = cA3 * dX + cA4 * dZ
 			dX = dX2
@@ -1002,34 +979,7 @@ local function newFrame(x1, y1, x2, y2)
 		end
 
 		if cA1 ~= 0 then
-			function map3dTo2dFull(x, y, z)
-				local dX = x + xCameraOffset
-		        local dY = y + yCameraOffset
-		        local dZ = z + zCameraOffset
-
-				local dX2 = cA4 * dX - cA3 * dZ
-				dZ = cA3 * dX + cA4 * dZ
-				dX = dX2
-
-				local dY2 = cA6 * dY - cA5 * dX
-				dX = cA5 * dY + cA6 * dX
-				dY = dY2
-
-				local dZ2 = cA1 * dZ - cA2 * dY
-				dY = cA2 * dZ + cA1 * dY
-				dZ = dZ2
-
-				local sX = (dZ / dX) * sXFactor + renderOffsetX
-				local sY = (dY / dX) * sYFactor + renderOffsetY
-
-				return sX, sY, dX, dY, dZ
-			end
-
-			function map3dTo2d(x, y, z)
-				local dX = x + xCameraOffset
-		        local dY = y + yCameraOffset
-		        local dZ = z + zCameraOffset
-
+			function map3dTo2d(dX, dY, dZ)
 				local dX2 = cA4 * dX - cA3 * dZ
 				dZ = cA3 * dX + cA4 * dZ
 				dX = dX2
@@ -1054,16 +1004,41 @@ local function newFrame(x1, y1, x2, y2)
 		for i = 1, #sortedPolygons do
 			local polygon = sortedPolygons[i]
 
-			local x1, y1, dX1 = map3dTo2d(polygon[1], polygon[2], polygon[3])
+			local x1, y1, dX1 = map3dTo2d(polygon[1] + xCameraOffset, polygon[2] + yCameraOffset, polygon[3] + zCameraOffset)
 			if dX1 > 0.00010000001 then
-				local x2, y2, dX2 = map3dTo2d(polygon[4], polygon[5], polygon[6])
+				local x2, y2, dX2 = map3dTo2d(polygon[4] + xCameraOffset, polygon[5] + yCameraOffset, polygon[6] + zCameraOffset)
 				if dX2 > 0.00010000001 then
-					local x3, y3, dX3 = map3dTo2d(polygon[7], polygon[8], polygon[9])
+					local x3, y3, dX3 = map3dTo2d(polygon[7] + xCameraOffset, polygon[8] + yCameraOffset, polygon[9] + zCameraOffset)
 					if dX3 > 0.00010000001 then
 						if polygon[10] or (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2) < 0 then
 		                	buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
 						end
 					elseif clippingEnabled then
+						function map3dTo2dFull(x, y, z)
+							local dX = x + xCameraOffset
+							local dY = y + yCameraOffset
+							local dZ = z + zCameraOffset
+
+							local dX2 = cA4 * dX - cA3 * dZ
+							dZ = cA3 * dX + cA4 * dZ
+							dX = dX2
+
+							local dY2 = cA6 * dY - cA5 * dX
+							dX = cA5 * dY + cA6 * dX
+							dY = dY2
+
+							if cA1 ~= 0 then
+								local dZ2 = cA1 * dZ - cA2 * dY
+								dY = cA2 * dZ + cA1 * dY
+								dZ = dZ2
+							end
+
+							local sX = (dZ / dX) * sXFactor + renderOffsetX
+							local sY = (dY / dX) * sYFactor + renderOffsetY
+
+							return sX, sY, dX, dY, dZ
+						end
+
 						local x1, y1, dX1, dY1, dZ1 = map3dTo2dFull(polygon[1], polygon[2], polygon[3])
 						local x2, y2, dX2, dY2, dZ2 = map3dTo2dFull(polygon[4], polygon[5], polygon[6])
 						local x3, y3, dX3, dY3, dZ3 = map3dTo2dFull(polygon[7], polygon[8], polygon[9])
@@ -1096,6 +1071,31 @@ local function newFrame(x1, y1, x2, y2)
 						end
 					end
 				elseif clippingEnabled then
+					function map3dTo2dFull(x, y, z)
+						local dX = x + xCameraOffset
+						local dY = y + yCameraOffset
+						local dZ = z + zCameraOffset
+
+						local dX2 = cA4 * dX - cA3 * dZ
+						dZ = cA3 * dX + cA4 * dZ
+						dX = dX2
+
+						local dY2 = cA6 * dY - cA5 * dX
+						dX = cA5 * dY + cA6 * dX
+						dY = dY2
+
+						if cA1 ~= 0 then
+							local dZ2 = cA1 * dZ - cA2 * dY
+							dY = cA2 * dZ + cA1 * dY
+							dZ = dZ2
+						end
+
+						local sX = (dZ / dX) * sXFactor + renderOffsetX
+						local sY = (dY / dX) * sYFactor + renderOffsetY
+
+						return sX, sY, dX, dY, dZ
+					end
+
 					local x1, y1, dX1, dY1, dZ1 = map3dTo2dFull(polygon[1], polygon[2], polygon[3])
 					local x2, y2, dX2, dY2, dZ2 = map3dTo2dFull(polygon[4], polygon[5], polygon[6])
 					local x3, y3, dX3, dY3, dZ3 = map3dTo2dFull(polygon[7], polygon[8], polygon[9])
@@ -1153,6 +1153,31 @@ local function newFrame(x1, y1, x2, y2)
 					end
 				end
 			elseif clippingEnabled then
+				function map3dTo2dFull(x, y, z)
+					local dX = x + xCameraOffset
+					local dY = y + yCameraOffset
+					local dZ = z + zCameraOffset
+
+					local dX2 = cA4 * dX - cA3 * dZ
+					dZ = cA3 * dX + cA4 * dZ
+					dX = dX2
+
+					local dY2 = cA6 * dY - cA5 * dX
+					dX = cA5 * dY + cA6 * dX
+					dY = dY2
+
+					if cA1 ~= 0 then
+						local dZ2 = cA1 * dZ - cA2 * dY
+						dY = cA2 * dZ + cA1 * dY
+						dZ = dZ2
+					end
+
+					local sX = (dZ / dX) * sXFactor + renderOffsetX
+					local sY = (dY / dX) * sYFactor + renderOffsetY
+
+					return sX, sY, dX, dY, dZ
+				end
+
 				local x1, y1, dX1, dY1, dZ1 = map3dTo2dFull(polygon[1], polygon[2], polygon[3])
 				local x2, y2, dX2, dY2, dZ2 = map3dTo2dFull(polygon[4], polygon[5], polygon[6])
 				local x3, y3, dX3, dY3, dZ3 = map3dTo2dFull(polygon[7], polygon[8], polygon[9])
