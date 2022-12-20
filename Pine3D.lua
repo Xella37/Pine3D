@@ -596,12 +596,12 @@ local function rotateModel(model, rotX, rotY, rotZ)
 	local rotYS, rotYC = 0, 1
 	local rotZS, rotZC = 0, 1
 
-	if rotX == 0 then rotX = nil else
-	rotXS, rotXC = sin(rotX), cos(rotX) end
-	if rotY == 0 then rotY = nil else
-	rotYS, rotYC = sin(rotY), cos(rotY) end
-	if rotZ == 0 then rotZ = nil else
-	rotZS, rotZC = sin(rotZ), cos(rotZ) end
+	if rotX == 0 then rotX = nil end
+	if rotX then rotXS, rotXC = sin(rotX), cos(rotX) end
+	if rotY == 0 then rotY = nil end
+	if rotY then rotYS, rotYC = sin(rotY), cos(rotY) end
+	if rotZ == 0 then rotZ = nil end
+	if rotZ then rotZS, rotZC = sin(rotZ), cos(rotZ) end
 
 	local rotatedModel = {}
 
