@@ -572,105 +572,61 @@ local rad = math.rad
 local sin = math.sin
 local cos = math.cos
 local atan2 = math.atan2
-local function rotatePolygonX(x, y, z, rotationX)
-	local angle = atan2(y + 0.0000001, z + 0.0000001)
-
-	local angle2 = angle + rotationX
-	while (angle2 > 180) do
-		angle2 = angle2 - 360
-	end
-	while (angle2 < -180) do
-		angle2 = angle2 + 360
-	end
-
-	local hDistance = sqrt(y*y + z*z)
-
-	local y = hDistance * sin(angle2)
-	local z = hDistance * cos(angle2)
-
+local function rotatePolygonX(x, y, z, rotS, rotC)
+	local z2 = rotC * z - rotS * y
+	local y = rotS * z + rotC * y
+	local z = z2
 	return x, y, z
 end
-local function rotatePolygonY(x, y, z, rotationY)
-	local angle = atan2(x + 0.0000001, z + 0.0000001)
-
-	local angle2 = angle + rotationY
-	while (angle2 > 180) do
-		angle2 = angle2 - 360
-	end
-	while (angle2 < -180) do
-		angle2 = angle2 + 360
-	end
-
-	local hDistance = sqrt(x*x + z*z)
-
-	local x = hDistance * sin(angle2)
-	local z = hDistance * cos(angle2)
-
+local function rotatePolygonY(x, y, z, rotS, rotC)
+	local z2 = rotC * z - rotS * x
+	local x = rotS * z + rotC * x
+	local z = z2
 	return x, y, z
 end
-local function rotatePolygonZ(x, y, z, rotationZ)
-	local angle = atan2(x + 0.0000001, y + 0.0000001)
-
-	local angle2 = angle + rotationZ
-	while (angle2 > 180) do
-		angle2 = angle2 - 360
-	end
-	while (angle2 < -180) do
-		angle2 = angle2 + 360
-	end
-
-	local hDistance = sqrt(x*x + y*y)
-
-	local x = hDistance * sin(angle2)
-	local y = hDistance * cos(angle2)
-
-	return x, y, z
+local function rotatePolygonZ(x, y, z, rotS, rotC)
+	local y2 = rotC * y - rotS * x
+	local x = rotS * y + rotC * x
+	local y = y2
+	return x, y
 end
-local function rotateModelX(model, rotationX)
+
+local function rotateModel(model, rotX, rotY, rotZ)
+	local rotXS, rotXC = 0, 1
+	local rotYS, rotYC = 0, 1
+	local rotZS, rotZC = 0, 1
+
+	if rotX == 0 then rotX = nil else
+	rotXS, rotXC = sin(rotX), cos(rotX) end
+	if rotY == 0 then rotY = nil else
+	rotYS, rotYC = sin(rotY), cos(rotY) end
+	if rotZ == 0 then rotZ = nil else
+	rotZS, rotZC = sin(rotZ), cos(rotZ) end
+
 	local rotatedModel = {}
 
 	for _, polygon in pairs(model) do
-		local x1, y1, z1 = rotatePolygonX(polygon[1], polygon[2], polygon[3], rotationX)
-		local x2, y2, z2 = rotatePolygonX(polygon[4], polygon[5], polygon[6], rotationX)
-		local x3, y3, z3 = rotatePolygonX(polygon[7], polygon[8], polygon[9], rotationX)
+		local x1, y1, z1 = polygon[1], polygon[2], polygon[3]
+		local x2, y2, z2 = polygon[4], polygon[5], polygon[6]
+		local x3, y3, z3 = polygon[7], polygon[8], polygon[9]
 
-		rotatedModel[#rotatedModel+1] = {x1, y1, z1, x2, y2, z2, x3, y3, z3}
-		rotatedModel[#rotatedModel][10] = polygon[10]
-		rotatedModel[#rotatedModel][11] = polygon[11]
-		rotatedModel[#rotatedModel][12] = polygon[12]
-		rotatedModel[#rotatedModel][13] = polygon[13]
-		rotatedModel[#rotatedModel][14] = polygon[14]
-		rotatedModel[#rotatedModel][15] = polygon[15]
-	end
+		if rotY then
+			x1, y1, z1 = rotatePolygonY(x1, y1, z1, rotYS, rotYC)
+			x2, y2, z2 = rotatePolygonY(x2, y2, z2, rotYS, rotYC)
+			x3, y3, z3 = rotatePolygonY(x3, y3, z3, rotYS, rotYC)
+		end
 
-	return rotatedModel
-end
-local function rotateModelY(model, rotationY)
-	local rotatedModel = {}
+		if rotZ then
+			x1, y1 = rotatePolygonZ(x1, y1, z1, rotZS, rotZC)
+			x2, y2 = rotatePolygonZ(x2, y2, z2, rotZS, rotZC)
+			x3, y3 = rotatePolygonZ(x3, y3, z3, rotZS, rotZC)
+		end
 
-	for _, polygon in pairs(model) do
-		local x1, y1, z1 = rotatePolygonY(polygon[1], polygon[2], polygon[3], rotationY)
-		local x2, y2, z2 = rotatePolygonY(polygon[4], polygon[5], polygon[6], rotationY)
-		local x3, y3, z3 = rotatePolygonY(polygon[7], polygon[8], polygon[9], rotationY)
-
-		rotatedModel[#rotatedModel+1] = {x1, y1, z1, x2, y2, z2, x3, y3, z3}
-		rotatedModel[#rotatedModel][10] = polygon[10]
-		rotatedModel[#rotatedModel][11] = polygon[11]
-		rotatedModel[#rotatedModel][12] = polygon[12]
-		rotatedModel[#rotatedModel][13] = polygon[13]
-		rotatedModel[#rotatedModel][14] = polygon[14]
-		rotatedModel[#rotatedModel][15] = polygon[15]
-	end
-
-	return rotatedModel
-end
-local function rotateModelZ(model, rotationZ)
-	local rotatedModel = {}
-
-	for _, polygon in pairs(model) do
-		local x1, y1, z1 = rotatePolygonZ(polygon[1], polygon[2], polygon[3], rotationZ)
-		local x2, y2, z2 = rotatePolygonZ(polygon[4], polygon[5], polygon[6], rotationZ)
-		local x3, y3, z3 = rotatePolygonZ(polygon[7], polygon[8], polygon[9], rotationZ)
+		if rotX then
+			x1, y1, z1 = rotatePolygonX(x1, y1, z1, rotXS, rotXC)
+			x2, y2, z2 = rotatePolygonX(x2, y2, z2, rotXS, rotXC)
+			x3, y3, z3 = rotatePolygonX(x3, y3, z3, rotXS, rotXC)
+		end
 
 		rotatedModel[#rotatedModel+1] = {x1, y1, z1, x2, y2, z2, x3, y3, z3}
 		rotatedModel[#rotatedModel][10] = polygon[10]
@@ -933,17 +889,11 @@ local function newFrame(x1, y1, x2, y2)
 			return
 		end
 
-		local rotY = object[5]
-		if rotY and rotY ~= 0 then
-			model = rotateModelY(model, rotY)
-		end
-		local rotZ = object[6]
-		if rotZ and rotZ ~= 0 then
-			model = rotateModelZ(model, rotZ)
-		end
 		local rotX = object[4]
-		if rotX and rotX ~= 0 then
-			model = rotateModelX(model, rotX)
+		local rotY = object[5]
+		local rotZ = object[6]
+		if (rotX and rotX ~= 0) or (rotY and rotY ~= 0) or (rotZ and rotZ ~= 0) then
+			model = rotateModel(model, rotX, rotY, rotZ)
 		end
 		sortPolygons(model, oX, oY, oZ, camera)
 
@@ -1370,17 +1320,11 @@ local function newFrame(x1, y1, x2, y2)
 
 			local model = object[7]
 
-			local rotY = object[5]
-			if rotY and rotY ~= 0 then
-				model = rotateModelY(model, rotY)
-			end
-			local rotZ = object[6]
-			if rotZ and rotZ ~= 0 then
-				model = rotateModelZ(model, rotZ)
-			end
 			local rotX = object[4]
-			if rotX and rotX ~= 0 then
-				model = rotateModelX(model, rotX)
+			local rotY = object[5]
+			local rotZ = object[6]
+			if (rotX and rotX ~= 0) or (rotY and rotY ~= 0) or (rotZ and rotZ ~= 0) then
+				model = rotateModel(model, rotX, rotY, rotZ)
 			end
 
 			local oX = object[1]
