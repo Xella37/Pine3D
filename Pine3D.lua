@@ -967,7 +967,7 @@ local function newFrame(x1, y1, x2, y2)
 		                	buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
 						end
 					elseif clippingEnabled then
-						function map3dTo2dFull(x, y, z)
+						local function map3dTo2dFull(x, y, z)
 							local dX = x + xCameraOffset
 							local dY = y + yCameraOffset
 							local dZ = z + zCameraOffset
@@ -1024,7 +1024,7 @@ local function newFrame(x1, y1, x2, y2)
 						end
 					end
 				elseif clippingEnabled then
-					function map3dTo2dFull(x, y, z)
+					local function map3dTo2dFull(x, y, z)
 						local dX = x + xCameraOffset
 						local dY = y + yCameraOffset
 						local dZ = z + zCameraOffset
@@ -1106,7 +1106,7 @@ local function newFrame(x1, y1, x2, y2)
 					end
 				end
 			elseif clippingEnabled then
-				function map3dTo2dFull(x, y, z)
+				local function map3dTo2dFull(x, y, z)
 					local dX = x + xCameraOffset
 					local dY = y + yCameraOffset
 					local dZ = z + zCameraOffset
