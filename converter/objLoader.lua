@@ -3,31 +3,31 @@ local path = "/objModels"
 
 local termColors = {}
 for i = 1, 16 do
-    local color = 2 ^ (i - 1)
-    local r, g, b = term.getPaletteColor(color)
-    local char = ("0123456789abcdef"):sub(i, i)
-    termColors[#termColors+1] = {r=r, g=g, b=b, code=char, color=color}
+	local color = 2 ^ (i - 1)
+	local r, g, b = term.getPaletteColor(color)
+	local char = ("0123456789abcdef"):sub(i, i)
+	termColors[#termColors+1] = {r=r, g=g, b=b, code=char, color=color}
 end
 
 local abs = math.abs
 local function closestCCColor(r, g, b)
-    local closest = termColors[1]
-    if not r or not g or not b then
-        return closest
-    end
+	local closest = termColors[1]
+	if not r or not g or not b then
+		return closest
+	end
 
-    local closestDistance = math.huge
+	local closestDistance = math.huge
 
-    for i, termColor in pairs(termColors) do
-        local distance = abs(r - termColor.r) + abs(g - termColor.g) + abs(b - termColor.b)
-        if (distance < closestDistance) then
-		    local color = 2 ^ (i - 1)
-            closest = color
-            closestDistance = distance
-        end
-    end
+	for i, termColor in pairs(termColors) do
+		local distance = abs(r - termColor.r) + abs(g - termColor.g) + abs(b - termColor.b)
+		if (distance < closestDistance) then
+			local color = 2 ^ (i - 1)
+			closest = color
+			closestDistance = distance
+		end
+	end
 
-    return closest
+	return closest
 end
 
 local shrink = 1
@@ -87,6 +87,26 @@ function loadMTLFile(dir, filename)
 			local r = tonumber(parts[2])
 			local g = tonumber(parts[3])
 			local b = tonumber(parts[4])
+
+			local function adjusted(c)
+				local srgb = 0
+				if c < 0.0031308 then
+					if c < 0.0 then
+					 	srgb = 0.0
+					else
+						srgb = c * 12.92
+					end
+				else
+					srgb = 1.055 * math.pow(c, 1.0 / 2.4) - 0.055
+				end
+
+				return math.max(math.min(math.floor(srgb * 255 + 0.5), 255), 0)
+			end
+
+			r = adjusted(r)/255
+			g = adjusted(g)/255
+			b = adjusted(b)/255
+
 			local color = closestCCColor(r, g, b)
 			material.baseColor = color
 		elseif not parts[1]:sub(1, 1) == "#" then
@@ -211,6 +231,10 @@ function loadObjFile(id)
 				y3 = y3,
 				z3 = z3,
 			}
+
+			if material:sub(-3) == "[F]" then
+				poly.forceRender = true
+			end
 
 			do
 				local v1 = faceVTs[1]
