@@ -177,40 +177,40 @@ local function newBuffer(x1, y1, x2, y2)
 		if x2 >= x1 then
 			for x = max(ceil(x1), 1), min(floor(x2), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-                if y > 0 and y <= frameHeight then
-                    c1[y][x] = charc
-    				c2[y][x] = c
-    				chars[y][x] = char
-                end
+				if y > 0 and y <= frameHeight then
+					c1[y][x] = charc
+					c2[y][x] = c
+					chars[y][x] = char
+				end
 			end
 		else
 			for x = max(ceil(x2), 1), min(floor(x1), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-                if y > 0 and y <= frameHeight then
-                    c1[y][x] = charc
-    				c2[y][x] = c
-    				chars[y][x] = char
-                end
+				if y > 0 and y <= frameHeight then
+					c1[y][x] = charc
+					c2[y][x] = c
+					chars[y][x] = char
+				end
 			end
 		end
 
 		if y2 >= y1 then
 			for y = max(ceil(y1), 1), min(floor(y2), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-                if x > 0 and x <= frameWidth then
-                    c1[y][x] = charc
-    				c2[y][x] = c
-    				chars[y][x] = char
-                end
+				if x > 0 and x <= frameWidth then
+					c1[y][x] = charc
+					c2[y][x] = c
+					chars[y][x] = char
+				end
 			end
 		else
 			for y = max(ceil(y2), 1), min(floor(y1), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-                if x > 0 and x <= frameWidth then
-                    c1[y][x] = charc
-    				c2[y][x] = c
-    				chars[y][x] = char
-                end
+				if x > 0 and x <= frameWidth then
+					c1[y][x] = charc
+					c2[y][x] = c
+					chars[y][x] = char
+				end
 			end
 		end
 	end
@@ -225,89 +225,31 @@ local function newBuffer(x1, y1, x2, y2)
 		if x2 >= x1 then
 			for x = max(ceil(x1), 1), min(floor(x2), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-                if y > 0 and y <= frameHeight then
+				if y > 0 and y <= frameHeight then
 					c2[y][x] = c
 				end
 			end
 		else
 			for x = max(ceil(x2), 1), min(floor(x1), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-                if y > 0 and y <= frameHeight then
-    				c2[y][x] = c
-                end
+				if y > 0 and y <= frameHeight then
+					c2[y][x] = c
+				end
 			end
 		end
 
 		if y2 >= y1 then
 			for y = max(ceil(y1), 1), min(floor(y2), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-                if x > 0 and x <= frameWidth then
-    				c2[y][x] = c
-                end
+				if x > 0 and x <= frameWidth then
+					c2[y][x] = c
+				end
 			end
 		else
 			for y = max(ceil(y2), 1), min(floor(y1), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-                if x > 0 and x <= frameWidth then
-    				c2[y][x] = c
-                end
-			end
-		end
-	end
-
-	function buffer:horLineNormal(a1, b1, a2, b2, startY, endY, c, char, charc)
-		local screenBuffer = self.screenBuffer
-		local c1 = screenBuffer.c1
-		local c2 = screenBuffer.c2
-		local chars = screenBuffer.chars
-
-		local frameWidth = self.width
-		local frameHeight = self.height
-
-		for y = max(min(ceil(startY), frameHeight + 1), 1), min(floor(endY), frameHeight) do
-            local x1 = (y - b1) / a1
-            local x2 = (y - b2) / a2
-
-			local c1Y = c1[y]
-			local c2Y = c2[y]
-			local charsY = chars[y]
-
-			if x1 < x2 then
-				for x = max(min(floor(x1 + 0.5), frameWidth + 1), 1), min(x2, frameWidth) do
-                    c1Y[x] = charc
-    				c2Y[x] = c
-    				charsY[x] = char
-				end
-			else
-				for x = max(min(floor(x2 + 0.5), frameWidth + 1), 1), min(x1, frameWidth) do
-                    c1Y[x] = charc
-    				c2Y[x] = c
-    				charsY[x] = char
-				end
-			end
-		end
-	end
-
-	function buffer:horLineBLittle(a1, b1, a2, b2, startY, endY, c)
-		local screenBuffer = self.screenBuffer
-		local c2 = screenBuffer.c2
-
-		local frameWidth = self.width
-		local frameHeight = self.height
-
-		for y = max(min(ceil(startY), frameHeight + 1), 1), min(floor(endY), frameHeight) do
-            local x1 = (y - b1) / a1
-            local x2 = (y - b2) / a2
-
-			local c2Y = c2[y]
-
-			if x1 < x2 then
-				for x = max(min(floor(x1 + 0.5), frameWidth + 1), 1), min(x2, frameWidth) do
-    				c2Y[x] = c
-				end
-			else
-				for x = max(min(floor(x2 + 0.5), frameWidth + 1), 1), min(x1, frameWidth) do
-    				c2Y[x] = c
+				if x > 0 and x <= frameWidth then
+					c2[y][x] = c
 				end
 			end
 		end
@@ -316,82 +258,97 @@ local function newBuffer(x1, y1, x2, y2)
 	local defaultOutlineColor = colors.black
 
 	function buffer:drawTriangleNormal(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor)
-		if x1 < 0 and x2 < 0 and x3 < 0 or y1 < 0 and y2 < 0 and y3 < 0 then
-			return
-		end
-
+		if x1 < 1 and x2 < 1 and x3 < 1 or y1 < 1 and y2 < 1 and y3 < 1 then return end
 		local frameWidth = self.width
-		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then
-			return
+		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then return end
+		local frameHeight = self.height
+		if y1 > frameHeight and y2 > frameHeight and y3 > frameHeight then return end
+
+		if y1 > y2 then
+			y1, y2 = y2, y1
+			x1, x2 = x2, x1
+		end
+		if y2 > y3 then
+			y3, y2 = y2, y3
+			x3, x2 = x2, x3
+		end
+		if y1 > y2 then
+			y1, y2 = y2, y1
+			x1, x2 = x2, x1
 		end
 
-		local frameHeight = self.height
-		if y1 > frameHeight and y2 > frameHeight and y3 > frameHeight then
-			return
-		end
+		local screenBuffer = self.screenBuffer
+
+		local floor, ceil = floor, ceil
+		local min, max = min, max
+
+		local minY = min(max(1, ceil(y1)), frameHeight)
+		local midY = min(max(0, floor(y2)), frameHeight)
+		local maxY = min(max(1, floor(y3)), frameHeight)
+
+		local c1 = screenBuffer.c1
+		local c2 = screenBuffer.c2
+		local chars = screenBuffer.chars
+
+		local x2_x1_div_y2_y1 = (x2 - x1) / (y2 - y1)
+		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
 
 		char = char or " "
 		charc = charc or c
 		local c = colorChar[c]
 		local charc = colorChar[charc]
 
-    	local a1, b1 = linear(x1, y1, x2, y2)
-		local a2, b2 = linear(x2, y2, x3, y3)
-		local a3, b3 = linear(x1, y1, x3, y3)
+		for y = minY, midY do
+			local c1Y = c1[y]
+			local c2Y = c2[y]
+			local charsY = chars[y]
 
-		local horLine = self.horLineNormal
-		if y1 <= y2 and y1 <= y3 then
-			if y2 <= y3 then
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y1, y2, c, char, charc)
-				end
-				if a2 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y2, y3, c, char, charc)
-				end
-			else
-				if a3 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y1, y3, c, char, charc)
-				end
-				if a2 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y3, y2, c, char, charc)
-				end
+			local xA = (y - y1) * x2_x1_div_y2_y1 + x1
+			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+			if xB < xA then xA, xB = xB, xA end
+
+			if xA < 1 then xA = 1 end
+			if xA > frameWidth then xA = frameWidth end
+			if xB < 1 then xB = 1 end
+			if xB > frameWidth then xB = frameWidth end
+
+			for x = floor(xA+0.5), floor(xB+0.5) do
+				c1Y[x] = charc
+				c2Y[x] = c
+				charsY[x] = char
 			end
-		elseif y2 <= y1 and y2 <= y3 then
-			if y1 <= y3 then
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y2, y1, c, char, charc)
-				end
-				if a3 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y1, y3, c, char, charc)
-				end
-			else
-				if a2 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y2, y3, c, char, charc)
-				end
-				if a3 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y3, y1, c, char, charc)
-				end
-			end
-		else
-			if y1 <= y2 then
-				if a3 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y3, y1, c, char, charc)
-				end
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y1, y2, c, char, charc)
-				end
-			else
-				if a2 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y3, y2, c, char, charc)
-				end
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y2, y1, c, char, charc)
-				end
+		end
+
+		local x3_x2_div_y3_y2 = (x3 - x2) / (y3 - y2)
+		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
+
+		for y = midY+1, maxY do
+			local c1Y = c1[y]
+			local c2Y = c2[y]
+			local charsY = chars[y]
+
+			local xA = (y - y2) * x3_x2_div_y3_y2 + x2
+			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+			if xB < xA then xA, xB = xB, xA end
+
+			if xA < 1 then xA = 1 end
+			if xA > frameWidth then xA = frameWidth end
+			if xB < 1 then xB = 1 end
+			if xB > frameWidth then xB = frameWidth end
+
+			for x = floor(xA+0.5), floor(xB+0.5) do
+				c1Y[x] = charc
+				c2Y[x] = c
+				charsY[x] = char
 			end
 		end
 
 		local outlineColor = outlineColor
 		if outlineColor or self.triangleEdges then
+			local a1, b1 = linear(x1, y1, x2, y2)
+			local a2, b2 = linear(x2, y2, x3, y3)
+			local a3, b3 = linear(x1, y1, x3, y3)
+
 			local loadLine = self.loadLineNormal
 			local c = colorChar[outlineColor or defaultOutlineColor]
 			loadLine(self, x1, y1, x2, y2, c, char, charc, a1, b1)
@@ -401,77 +358,82 @@ local function newBuffer(x1, y1, x2, y2)
 	end
 
 	function buffer:drawTriangleBLittle(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor)
-		if x1 < 0 and x2 < 0 and x3 < 0 or y1 < 0 and y2 < 0 and y3 < 0 then
-			return
-		end
-
+		if x1 < 1 and x2 < 1 and x3 < 1 or y1 < 1 and y2 < 1 and y3 < 1 then return end
 		local frameWidth = self.width
-		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then
-			return
-		end
-
+		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then return end
 		local frameHeight = self.height
-		if y1 > frameHeight and y2 > frameHeight and y3 > frameHeight then
-			return
+		if y1 > frameHeight and y2 > frameHeight and y3 > frameHeight then return end
+
+		if y1 > y2 then
+			y1, y2 = y2, y1
+			x1, x2 = x2, x1
+		end
+		if y2 > y3 then
+			y3, y2 = y2, y3
+			x3, x2 = x2, x3
+		end
+		if y1 > y2 then
+			y1, y2 = y2, y1
+			x1, x2 = x2, x1
 		end
 
-    	local a1, b1 = linear(x1, y1, x2, y2)
-		local a2, b2 = linear(x2, y2, x3, y3)
-		local a3, b3 = linear(x1, y1, x3, y3)
+		local screenBuffer = self.screenBuffer
 
-		local horLine = self.horLineBLittle
-		if y1 <= y2 and y1 <= y3 then
-			if y2 <= y3 then
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y1, y2, c)
-				end
-				if a2 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y2, y3, c)
-				end
-			else
-				if a3 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y1, y3, c)
-				end
-				if a2 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y3, y2, c)
-				end
+		local floor, ceil = floor, ceil
+		local min, max = min, max
+
+		local minY = min(max(1, ceil(y1)), frameHeight)
+		local midY = min(max(0, floor(y2)), frameHeight)
+		local maxY = min(max(1, floor(y3)), frameHeight)
+
+		local c2 = screenBuffer.c2
+
+		local x2_x1_div_y2_y1 = (x2 - x1) / (y2 - y1)
+		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
+
+		for y = minY, midY do
+			local c2Y = c2[y]
+
+			local xA = (y - y1) * x2_x1_div_y2_y1 + x1
+			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+			if xB < xA then xA, xB = xB, xA end
+
+			if xA < 1 then xA = 1 end
+			if xA > frameWidth then xA = frameWidth end
+			if xB < 1 then xB = 1 end
+			if xB > frameWidth then xB = frameWidth end
+
+			for x = floor(xA+0.5), floor(xB+0.5) do
+				c2Y[x] = c
 			end
-		elseif y2 <= y1 and y2 <= y3 then
-			if y1 <= y3 then
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y2, y1, c)
-				end
-				if a3 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y1, y3, c)
-				end
-			else
-				if a2 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y2, y3, c)
-				end
-				if a3 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y3, y1, c)
-				end
-			end
-		else
-			if y1 <= y2 then
-				if a3 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y3, y1, c)
-				end
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a2, b2, y1, y2, c)
-				end
-			else
-				if a2 ~= 0 then
-					horLine(self, a2, b2, a3, b3, y3, y2, c)
-				end
-				if a1 ~= 0 then
-					horLine(self, a1, b1, a3, b3, y2, y1, c)
-				end
+		end
+
+		local x3_x2_div_y3_y2 = (x3 - x2) / (y3 - y2)
+		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
+
+		for y = midY+1, maxY do
+			local c2Y = c2[y]
+
+			local xA = (y - y2) * x3_x2_div_y3_y2 + x2
+			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+			if xB < xA then xA, xB = xB, xA end
+
+			if xA < 1 then xA = 1 end
+			if xA > frameWidth then xA = frameWidth end
+			if xB < 1 then xB = 1 end
+			if xB > frameWidth then xB = frameWidth end
+
+			for x = floor(xA+0.5), floor(xB+0.5) do
+				c2Y[x] = c
 			end
 		end
 
 		local outlineColor = outlineColor
 		if outlineColor or self.triangleEdges then
+			local a1, b1 = linear(x1, y1, x2, y2)
+			local a2, b2 = linear(x2, y2, x3, y3)
+			local a3, b3 = linear(x1, y1, x3, y3)
+
 			local loadLine = self.loadLineBLittle
 			local c = outlineColor or defaultOutlineColor
 			loadLine(self, x1, y1, x2, y2, c, a1, b1)
@@ -505,7 +467,7 @@ local function newBuffer(x1, y1, x2, y2)
 
 	function buffer:drawBufferBLittle()
 		local blittleWindow = self.blittleWindow
-        if not blittleWindow then
+		if not blittleWindow then
 			self.blittleWindow = window.create(term.current(), self.x1, self.y1, self.x1 + self.width-1, self.y1 + self.height-1, false)
 			blittleWindow = self.blittleWindow
 		end
@@ -534,17 +496,43 @@ end
 
 local sqrt = math.sqrt
 local sort = table.sort
-local function polySorted(polygons)
-	local prevVal = polygons[1][16]
-	for i = 2, #polygons do
-		local val = polygons[i][16]
-		if val > prevVal then
-			return false
+function swapPoly16(a, b, table)
+	if table[a] == nil or table[b] == nil then
+		return false
+	end
+	if table[a][16] < table[b][16] then
+		table[a], table[b] = table[b], table[a]
+		return true
+	end
+	return false
+end
+
+function bubblesort16(array)
+	for i = 1, #array do
+		local ci = i
+		while swapPoly16(ci, ci+1, array) do
+			ci = ci - 1
+		end
+	end
+end
+
+local function getCorrect16(array)
+	local n = #array
+	local correct = 0
+	local prevVal = array[1][16]
+	for i = 2, n do
+		local val = array[i][16]
+		if val <= prevVal then
+			correct = correct + 1
 		end
 		prevVal = val
 	end
-	return true
+	local correctRatio = correct / (n-1)
+	return correctRatio
 end
+
+local a=8;local function b(c)local d=0;while c>=a do d=bit.bor(d,bit.band(c,1))c=bit.brshift(c,1)end;return c+d end;local function e(f,g,h)for i=g+1,h do local j=f[i]local k=j[16]local l=i-1;while l>=g and f[l][16]>k do f[l+1]=f[l]l=l-1 end;f[l+1]=j end end;local function m(f,g,h,n,o,d)local p=o-n+1;local q=d-o;for r=0,p-1 do g[r]=f[n+r]end;for r=0,q-1 do h[r]=f[o+1+r]end;local i=0;local l=0;local s=n;while i<p and l<q do if g[i][16]<=h[l][16]then f[s]=g[i]i=i+1 else f[s]=h[l]l=l+1 end;s=s+1 end;while i<p do f[s]=g[i]s=s+1;i=i+1 end;while l<q do f[s]=h[l]s=s+1;l=l+1 end end;function timsort16(f)local c=#f;local t=b(a)local u=math.min;for i=1,c,t do e(f,i,u(i+a-1,c))end;local v,w={},{}local x=t;while x<=c do for g=1,c,2*x do local y=g+x-1;local h=u(y+x,c)if y<h then m(f,v,w,g,y,h)end end;x=2*x end;for i=1,math.floor(c/2)do f[i],f[c-i+1]=f[c-i+1],f[i]end end
+
 local function sortPolygons(polygons, objectX, objectY, objectZ, camera)
 	local camX = camera[1]
 	local camY = camera[2]
@@ -563,8 +551,13 @@ local function sortPolygons(polygons, objectX, objectY, objectZ, camera)
 		polygon[16] = avgX*avgX + avgY*avgY + avgZ*avgZ -- relative distance
 	end
 
-	if not polySorted(polygons) then
-		sort(polygons, function(a, b) return a[16] > b[16] end)
+	local correctRatio = getCorrect16(polygons)
+
+	if correctRatio == 1 then
+	elseif correctRatio > 0.7 then
+		bubblesort16(polygons)
+	else
+		timsort16(polygons)
 	end
 end
 
@@ -640,6 +633,43 @@ local function rotateModel(model, rotX, rotY, rotZ)
 	return rotatedModel
 end
 
+local a=8;local function b(c)local d=0;while c>=a do d=bit.bor(d,bit.band(c,1))c=bit.brshift(c,1)end;return c+d end;local function e(f,g,h)for i=g+1,h do local j=f[i]local k=j[9]local l=i-1;while l>=g and f[l][9]>k do f[l+1]=f[l]l=l-1 end;f[l+1]=j end end;local function m(f,g,h,n,o,d)local p=o-n+1;local q=d-o;for r=0,p-1 do g[r]=f[n+r]end;for r=0,q-1 do h[r]=f[o+1+r]end;local i=0;local l=0;local s=n;while i<p and l<q do if g[i][9]<=h[l][9]then f[s]=g[i]i=i+1 else f[s]=h[l]l=l+1 end;s=s+1 end;while i<p do f[s]=g[i]s=s+1;i=i+1 end;while l<q do f[s]=h[l]s=s+1;l=l+1 end end;function timsort9(f)local c=#f;local t=b(a)local u=math.min;for i=1,c,t do e(f,i,u(i+a-1,c))end;local v,w={},{}local x=t;while x<=c do for g=1,c,2*x do local y=g+x-1;local h=u(y+x,c)if y<h then m(f,v,w,g,y,h)end end;x=2*x end;for i=1,math.floor(c/2)do f[i],f[c-i+1]=f[c-i+1],f[i]end end
+
+function swap9(a, b, table)
+	if table[a] == nil or table[b] == nil then
+		return false
+	end
+	if table[a][9] < table[b][9] then
+		table[a], table[b] = table[b], table[a]
+		return true
+	end
+	return false
+end
+
+function bubblesort9(array)
+	for i = 1, #array do
+		local ci = i
+		while swap9(ci, ci+1, array) do
+			ci = ci - 1
+		end
+	end
+end
+
+local function getCorrect9(array)
+	local n = #array
+	local correct = 0
+	local prevVal = array[1][9]
+	for i = 2, n do
+		local val = array[i][9]
+		if val <= prevVal then
+			correct = correct + 1
+		end
+		prevVal = val
+	end
+	local correctRatio = correct / (n-1)
+	return correctRatio
+end
+
 local function sortObjects(objects, camera)
 	local cX = camera[1]
 	local cY = camera[2]
@@ -658,7 +688,14 @@ local function sortObjects(objects, camera)
 		object[9] = dX*dX + dY*dY + dZ*dZ -- relative distance
 	end
 
-	sort(objects, function(a, b) return a[9] > b[9] end)
+	local correctRatio = getCorrect9(objects)
+
+	if correctRatio == 1 then
+	elseif correctRatio > 0.7 then
+		bubblesort9(objects)
+	else
+		sort(objects, function(a, b) return a[9] > b[9] end)
+	end
 end
 
 local function loadModel(path)
@@ -693,16 +730,16 @@ local function newFrame(x1, y1, x2, y2)
 	local x2 = x2 or (width - x1 + 1)
 	local y2 = y2 or (height - y1 + 1)
 
-    local frame = {
-        camera = {
-            0.000001,
+	local frame = {
+		camera = {
+			0.000001,
 			0.000001,
 			0.000001,
 			nil,
 			0,
 			0,
-        },
-        buffer = newBuffer(x1, y1, x2, y2),
+		},
+		buffer = newBuffer(x1, y1, x2, y2),
 		x1 = x1,
 		y1 = y1,
 		x2 = x2,
@@ -711,7 +748,7 @@ local function newFrame(x1, y1, x2, y2)
 		height = height,
 		blittleOn = false,
 		pixelratio = 1.5,
-    }
+	}
 	frame.FoV = 90
 	frame.camera[7] = rad(frame.FoV)
 	frame.t = tan(rad(frame.FoV / 2)) * 2 * 0.0001
@@ -759,7 +796,7 @@ local function newFrame(x1, y1, x2, y2)
 		self:updateMappingConstants()
 	end
 
-    function frame:loadModelRaw(model)
+	function frame:loadModelRaw(model)
 		local transformedModel = {}
 		local biggestDistance = 0
 
@@ -797,7 +834,7 @@ local function newFrame(x1, y1, x2, y2)
 			end
 		end
 		return transformedModel, biggestDistance
-    end
+	end
 
 	function frame:updateMappingConstants()
 		self.renderOffsetX = floor(self.width * 0.5) + 1
@@ -807,7 +844,7 @@ local function newFrame(x1, y1, x2, y2)
 		self.sYFactor = -0.0001 * self.width / (self.t * self.height * self.pixelratio) * self.height
 	end
 
-    function frame:map3dTo2d(x, y, z)
+	function frame:map3dTo2d(x, y, z)
 		local camera = self.camera
 		local cA1 = sin(camera[4] or 0)
 		local cA2 = cos(camera[4] or 0)
@@ -838,9 +875,9 @@ local function newFrame(x1, y1, x2, y2)
 		local sY = (dY / dX) * self.sYFactor + self.renderOffsetY
 
 		return sX, sY, dX >= 0.0001
-    end
+	end
 
-    function frame:drawObject(object, camera, cameraAngles)
+	function frame:drawObject(object, camera, cameraAngles)
 		local oX = object[1]
 		local oY = object[2]
 		local oZ = object[3]
@@ -964,7 +1001,7 @@ local function newFrame(x1, y1, x2, y2)
 					local x3, y3, dX3 = map3dTo2d(polygon[7] + xCameraOffset, polygon[8] + yCameraOffset, polygon[9] + zCameraOffset)
 					if dX3 > 0.00010000001 then
 						if polygon[10] or (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2) < 0 then
-		                	buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
 						end
 					elseif clippingEnabled then
 						local function map3dTo2dFull(x, y, z)
@@ -1216,10 +1253,10 @@ local function newFrame(x1, y1, x2, y2)
 					end
 				end
 			end
-        end
-    end
+		end
+	end
 
-    function frame:drawObjects(objects)
+	function frame:drawObjects(objects)
 		local camera = self.camera
 		local cameraAngles = {
 			sin(camera[4] or 0), cos(camera[4] or 0),
@@ -1229,16 +1266,16 @@ local function newFrame(x1, y1, x2, y2)
 
 		sortObjects(objects, camera)
 		local objects = objects
-        for i = 1, #objects do
-            self:drawObject(objects[i], camera, cameraAngles)
-        end
-    end
+		for i = 1, #objects do
+			self:drawObject(objects[i], camera, cameraAngles)
+		end
+	end
 
-    function frame:drawBuffer()
+	function frame:drawBuffer()
 		local buff = self.buffer
-        buff:drawBuffer()
+		buff:drawBuffer()
 		buff:fastClear()
-    end
+	end
 
 	function frame:setCamera(cameraX, cameraY, cameraZ, rotX, rotY, rotZ)
 		local rad = math.rad
@@ -1350,8 +1387,8 @@ local function newFrame(x1, y1, x2, y2)
 
 			local function map3dTo2d(x, y, z)
 				local dX = x + xCameraOffset
-		        local dY = y + yCameraOffset
-		        local dZ = z + zCameraOffset
+				local dY = y + yCameraOffset
+				local dZ = z + zCameraOffset
 
 				local dX2 = cA4 * dX - cA3 * dZ
 				dZ = cA3 * dX + cA4 * dZ
@@ -1511,7 +1548,7 @@ local function newFrame(x1, y1, x2, y2)
 	frame:updateMappingConstants()
 	frame:highResMode(true)
 
-    return frame
+	return frame
 end
 
 local models = {}
@@ -1751,8 +1788,8 @@ function models:mountains(options)
 		local z1 = sin((pos-1)  /options.res*pi*2) * options.scale
 		local x2 = cos((pos-0.5)/options.res*pi*2) * options.scale
 		local z2 = sin((pos-0.5)/options.res*pi*2) * options.scale
-		local x3 = cos(pos      /options.res*pi*2) * options.scale
-		local z3 = sin(pos      /options.res*pi*2) * options.scale
+		local x3 = cos(pos	  /options.res*pi*2) * options.scale
+		local z3 = sin(pos	  /options.res*pi*2) * options.scale
 
 		local mountainHeight = math.random(minHeight*100, maxHeight*100) / 100 * options.scale
 
