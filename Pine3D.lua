@@ -24,7 +24,14 @@ local max = math.max
 local floor = math.floor
 local ceil = math.ceil
 
+---Creates a new Buffer for rendering triangles
+---@param x1 number top-left x coordinate of the Buffer on the screen
+---@param y1 number top-left y coordinate of the Buffer on the screen
+---@param x2 number bottom-right x coordinate of the Buffer on the screen
+---@param y2 number bottom-right y coordinate of the Buffer on the screen
+---@return Buffer
 local function newBuffer(x1, y1, x2, y2)
+	---@class Buffer
 	local buffer = {
 		x1 = x1,
 		y1 = y1,
@@ -38,15 +45,20 @@ local function newBuffer(x1, y1, x2, y2)
 		backgroundColor = colors.lightBlue
 	}
 
-	function buffer:setBufferSize(x1, y1, x2, y2)
-		self.x1 = x1
-		self.y1 = y1
+	---Reposition the Buffer
+	---@param newX1 number
+	---@param newY1 number
+	---@param newX2 number
+	---@param newY2 number
+	function buffer:setBufferSize(newX1, newY1, newX2, newY2)
+		self.x1 = newX1
+		self.y1 = newY1
 
-		self.x2 = x2
-		self.y2 = y2
+		self.x2 = newX2
+		self.y2 = newY2
 
-		self.width = x2 - x1 + 1
-		self.height = y2 - y1 + 1
+		self.width = newX2 - newX1 + 1
+		self.height = newY2 - newY1 + 1
 
 		if self.blittleWindow then
 			self.blittleWindow = self.blittleWindow.reposition(self.x1, self.y1, self.x1 + self.width-1, self.y1 + self.height-1)
@@ -55,6 +67,7 @@ local function newBuffer(x1, y1, x2, y2)
 		self:clear()
 	end
 
+	---Fully clear the Buffer
 	function buffer:clear()
 		local screenBuffer = self.screenBuffer
 
@@ -97,6 +110,7 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
+	---Clear the Buffer quickly without blittle enabled
 	function buffer:fastClearNormal()
 		local c = self.backgroundColor
 
@@ -120,6 +134,7 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
+	---Clear the Buffer quickly with blittle enabled
 	function buffer:fastClearBLittle()
 		local c = self.backgroundColor
 		local c2 = self.screenBuffer.c2
@@ -133,9 +148,15 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
+	---Set the color of an individual pixel
+	---@param x number
+	---@param y number
+	---@param c1 number color for the pixel
+	---@param c2 string? color for the pixel
+	---@param char string? char for the pixel
 	function buffer:setPixel(x, y, c1, c2, char)
-		local x = math.floor(x+0.5)
-		local y = math.floor(y+0.5)
+		x = math.floor(x+0.5)
+		y = math.floor(y+0.5)
 
 		if x >= 1 and x <= self.width then
 			if y >= 1 and y <= self.height then
@@ -151,6 +172,12 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
+	---@alias PaintUtilsImage table
+
+	---Render an image to the Buffer at a given offset
+	---@param dx number
+	---@param dy number
+	---@param image PaintUtilsImage can be loaded with paintutils.loadImage (from .nfp)
 	function buffer:image(dx, dy, image)
 		for y, row in pairs(image) do
 			for x, value in pairs(row) do
@@ -473,7 +500,9 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 
 		betterblittle.drawBuffer(self.screenBuffer.c2, blittleWindow)
+		---@diagnostic disable-next-line: need-check-nil
 		blittleWindow.setVisible(true)
+		---@diagnostic disable-next-line: need-check-nil
 		blittleWindow.setVisible(false)
 	end
 
@@ -494,9 +523,8 @@ local function newBuffer(x1, y1, x2, y2)
 	return buffer
 end
 
-local sqrt = math.sqrt
 local sort = table.sort
-function swapPoly16(a, b, table)
+local function swapPoly16(a, b, table)
 	if table[a] == nil or table[b] == nil then
 		return false
 	end
@@ -507,7 +535,7 @@ function swapPoly16(a, b, table)
 	return false
 end
 
-function bubblesort16(array)
+local function bubblesort16(array)
 	for i = 1, #array do
 		local ci = i
 		while swapPoly16(ci, ci+1, array) do
@@ -531,8 +559,14 @@ local function getCorrect16(array)
 	return correctRatio
 end
 
-local a=8;local function b(c)local d=0;while c>=a do d=bit.bor(d,bit.band(c,1))c=bit.brshift(c,1)end;return c+d end;local function e(f,g,h)for i=g+1,h do local j=f[i]local k=j[16]local l=i-1;while l>=g and f[l][16]>k do f[l+1]=f[l]l=l-1 end;f[l+1]=j end end;local function m(f,g,h,n,o,d)local p=o-n+1;local q=d-o;for r=0,p-1 do g[r]=f[n+r]end;for r=0,q-1 do h[r]=f[o+1+r]end;local i=0;local l=0;local s=n;while i<p and l<q do if g[i][16]<=h[l][16]then f[s]=g[i]i=i+1 else f[s]=h[l]l=l+1 end;s=s+1 end;while i<p do f[s]=g[i]s=s+1;i=i+1 end;while l<q do f[s]=h[l]s=s+1;l=l+1 end end;function timsort16(f)local c=#f;local t=b(a)local u=math.min;for i=1,c,t do e(f,i,u(i+a-1,c))end;local v,w={},{}local x=t;while x<=c do for g=1,c,2*x do local y=g+x-1;local h=u(y+x,c)if y<h then m(f,v,w,g,y,h)end end;x=2*x end;for i=1,math.floor(c/2)do f[i],f[c-i+1]=f[c-i+1],f[i]end end
+local a=8;local function b(c)local d=0;while c>=a do d=bit.bor(d,bit.band(c,1))c=bit.brshift(c,1)end;return c+d end;local function e(f,g,h)for i=g+1,h do local j=f[i]local k=j[16]local l=i-1;while l>=g and f[l][16]>k do f[l+1]=f[l]l=l-1 end;f[l+1]=j end end;local function m(f,g,h,n,o,d)local p=o-n+1;local q=d-o;for r=0,p-1 do g[r]=f[n+r]end;for r=0,q-1 do h[r]=f[o+1+r]end;local i=0;local l=0;local s=n;while i<p and l<q do if g[i][16]<=h[l][16]then f[s]=g[i]i=i+1 else f[s]=h[l]l=l+1 end;s=s+1 end;while i<p do f[s]=g[i]s=s+1;i=i+1 end;while l<q do f[s]=h[l]s=s+1;l=l+1 end end;local function timsort16(f)local c=#f;local t=b(a)local u=math.min;for i=1,c,t do e(f,i,u(i+a-1,c))end;local v,w={},{}local x=t;while x<=c do for g=1,c,2*x do local y=g+x-1;local h=u(y+x,c)if y<h then m(f,v,w,g,y,h)end end;x=2*x end;for i=1,math.floor(c/2)do f[i],f[c-i+1]=f[c-i+1],f[i]end end
 
+---Sorts the polygons from back to front relative to the Camera
+---@param polygons Polygon[]
+---@param objectX number
+---@param objectY number
+---@param objectZ number
+---@param camera CollapsedCamera
 local function sortPolygons(polygons, objectX, objectY, objectZ, camera)
 	local camX = camera[1]
 	local camY = camera[2]
@@ -564,7 +598,6 @@ end
 local rad = math.rad
 local sin = math.sin
 local cos = math.cos
-local atan2 = math.atan2
 local function rotatePolygonX(x, y, z, rotS, rotC)
 	local z2 = rotC * z - rotS * y
 	local y = rotS * z + rotC * y
@@ -584,6 +617,12 @@ local function rotatePolygonZ(x, y, z, rotS, rotC)
 	return x, y
 end
 
+---Rotates a given model around three axes
+---@param model CollapsedModel
+---@param rotX number?
+---@param rotY number?
+---@param rotZ number?
+---@return CollapsedModel
 local function rotateModel(model, rotX, rotY, rotZ)
 	local rotXS, rotXC = 0, 1
 	local rotYS, rotYC = 0, 1
@@ -633,9 +672,7 @@ local function rotateModel(model, rotX, rotY, rotZ)
 	return rotatedModel
 end
 
-local a=8;local function b(c)local d=0;while c>=a do d=bit.bor(d,bit.band(c,1))c=bit.brshift(c,1)end;return c+d end;local function e(f,g,h)for i=g+1,h do local j=f[i]local k=j[9]local l=i-1;while l>=g and f[l][9]>k do f[l+1]=f[l]l=l-1 end;f[l+1]=j end end;local function m(f,g,h,n,o,d)local p=o-n+1;local q=d-o;for r=0,p-1 do g[r]=f[n+r]end;for r=0,q-1 do h[r]=f[o+1+r]end;local i=0;local l=0;local s=n;while i<p and l<q do if g[i][9]<=h[l][9]then f[s]=g[i]i=i+1 else f[s]=h[l]l=l+1 end;s=s+1 end;while i<p do f[s]=g[i]s=s+1;i=i+1 end;while l<q do f[s]=h[l]s=s+1;l=l+1 end end;function timsort9(f)local c=#f;local t=b(a)local u=math.min;for i=1,c,t do e(f,i,u(i+a-1,c))end;local v,w={},{}local x=t;while x<=c do for g=1,c,2*x do local y=g+x-1;local h=u(y+x,c)if y<h then m(f,v,w,g,y,h)end end;x=2*x end;for i=1,math.floor(c/2)do f[i],f[c-i+1]=f[c-i+1],f[i]end end
-
-function swap9(a, b, table)
+local function swap9(a, b, table)
 	if table[a] == nil or table[b] == nil then
 		return false
 	end
@@ -646,7 +683,7 @@ function swap9(a, b, table)
 	return false
 end
 
-function bubblesort9(array)
+local function bubblesort9(array)
 	for i = 1, #array do
 		local ci = i
 		while swap9(ci, ci+1, array) do
@@ -698,6 +735,7 @@ local function sortObjects(objects, camera)
 	end
 end
 
+---@param path string
 local function loadModel(path)
 	local modelFile = fs.open(path, "r")
 	if not modelFile then
@@ -706,7 +744,9 @@ local function loadModel(path)
 	local content = modelFile.readAll()
 	modelFile.close()
 
-	return textutils.unserialise(content)
+	---@class Model
+	local model = textutils.unserialise(content)
+	return model
 end
 
 local pi = math.pi
@@ -716,6 +756,12 @@ local cos = math.cos
 local tan = math.tan
 local sqrt = math.sqrt
 
+---Creates a new ThreeDFrame
+---@param x1 number? top-left x coordinate of the ThreeDFrame on the screen
+---@param y1 number? top-left y coordinate of the ThreeDFrame on the screen
+---@param x2 number? bottom-right x coordinate of the ThreeDFrame on the screen
+---@param y2 number? bottom-right y coordinate of the ThreeDFrame on the screen
+---@return ThreeDFrame
 local function newFrame(x1, y1, x2, y2)
 	local width, height = term.getSize()
 	if x1 and x2 then
@@ -730,7 +776,9 @@ local function newFrame(x1, y1, x2, y2)
 	local x2 = x2 or (width - x1 + 1)
 	local y2 = y2 or (height - y1 + 1)
 
+	---@class ThreeDFrame
 	local frame = {
+		---@class CollapsedCamera
 		camera = {
 			0.000001,
 			0.000001,
@@ -753,10 +801,20 @@ local function newFrame(x1, y1, x2, y2)
 	frame.camera[7] = rad(frame.FoV)
 	frame.t = tan(rad(frame.FoV / 2)) * 2 * 0.0001
 
+	local renderOffsetX, renderOffsetY, sXFactor, sYFactor
+
 	function frame:setBackgroundColor(c)
 		local buff = self.buffer
 		buff.backgroundColor = c
 		buff:fastClear()
+	end
+
+	local function updateMappingConstants()
+		renderOffsetX = floor(frame.width * 0.5) + 1
+		renderOffsetY = floor(frame.height * 0.5)
+
+		sXFactor = 0.0001 * frame.width / frame.t
+		sYFactor = -0.0001 * frame.width / (frame.t * frame.height * frame.pixelratio) * frame.height
 	end
 
 	function frame:setSize(x1, y1, x2, y2)
@@ -776,9 +834,11 @@ local function newFrame(x1, y1, x2, y2)
 			self.pixelratio = 1
 			self.buffer:setBufferSize(x1, y1, x1 + self.width - 1, y1 + self.height - 1)
 		end
-		self:updateMappingConstants()
+		updateMappingConstants()
 	end
 
+	---If enabled, uses special characters to achieve a higher perceived resolution (enabled by default)
+	---@param enabled boolean
 	function frame:highResMode(enabled)
 		self.blittleOn = enabled
 		self.buffer:highResMode(enabled)
@@ -793,10 +853,15 @@ local function newFrame(x1, y1, x2, y2)
 			self.height = self.y2 - self.y1 + 1
 			self.pixelratio = 1.5
 		end
-		self:updateMappingConstants()
+		updateMappingConstants()
 	end
 
+	---Used internally. Creates a CollapsedModel from a Model and also returns the biggest distance from its origin (for frustum culling)
+	---@param model Model
+	---@return CollapsedModel
+	---@return number biggestDistance largest distance of a vertex in the model from its origin
 	function frame:loadModelRaw(model)
+		---@class CollapsedModel
 		local transformedModel = {}
 		local biggestDistance = 0
 
@@ -836,14 +901,6 @@ local function newFrame(x1, y1, x2, y2)
 		return transformedModel, biggestDistance
 	end
 
-	function frame:updateMappingConstants()
-		self.renderOffsetX = floor(self.width * 0.5) + 1
-		self.renderOffsetY = floor(self.height * 0.5)
-
-		self.sXFactor = 0.0001 * self.width / self.t
-		self.sYFactor = -0.0001 * self.width / (self.t * self.height * self.pixelratio) * self.height
-	end
-
 	function frame:map3dTo2d(x, y, z)
 		local camera = self.camera
 		local cA1 = sin(camera[4] or 0)
@@ -871,12 +928,16 @@ local function newFrame(x1, y1, x2, y2)
 			dZ = dZ2
 		end
 
-		local sX = (dZ / dX) * self.sXFactor + self.renderOffsetX
-		local sY = (dY / dX) * self.sYFactor + self.renderOffsetY
+		local sX = (dZ / dX) * sXFactor + renderOffsetX
+		local sY = (dY / dX) * sYFactor + renderOffsetY
 
 		return sX, sY, dX >= 0.0001
 	end
 
+	---Draw an object
+	---@param object PineObject
+	---@param camera CollapsedCamera
+	---@param cameraAngles CameraAngles
 	function frame:drawObject(object, camera, cameraAngles)
 		local oX = object[1]
 		local oY = object[2]
@@ -936,11 +997,11 @@ local function newFrame(x1, y1, x2, y2)
 
 		local clippingEnabled = xCameraOffset*xCameraOffset + yCameraOffset*yCameraOffset + zCameraOffset*zCameraOffset < modelSize*modelSize*4
 
-		local renderOffsetX = self.renderOffsetX
-		local renderOffsetY = self.renderOffsetY
+		local renderOffsetX = renderOffsetX
+		local renderOffsetY = renderOffsetY
 
-		local sXFactor = self.sXFactor
-		local sYFactor = self.sYFactor
+		local sXFactor = sXFactor
+		local sYFactor = sYFactor
 
 		local cA1 = cA1
 		local cA2 = cA2
@@ -1256,8 +1317,11 @@ local function newFrame(x1, y1, x2, y2)
 		end
 	end
 
+	---Draw objects and render them to the internal Buffer
+	---@param objects PineObject[]
 	function frame:drawObjects(objects)
 		local camera = self.camera
+		---@class CameraAngles
 		local cameraAngles = {
 			sin(camera[4] or 0), cos(camera[4] or 0),
 			sin(-camera[5]), cos(-camera[5]),
@@ -1277,10 +1341,21 @@ local function newFrame(x1, y1, x2, y2)
 		buff:fastClear()
 	end
 
+	---@alias PineCamera {x: number?, y: number?, z: number?, rotX: number?, rotY: number?, rotZ: number?}
+
+	---Update any position or rotation value of the Camera. You can also pass a PineCamera
+	---@param cameraX number?
+	---@param cameraY number?
+	---@param cameraZ number?
+	---@param rotX number?
+	---@param rotY number?
+	---@param rotZ number?
+	---@overload fun(self, camera: PineCamera)
 	function frame:setCamera(cameraX, cameraY, cameraZ, rotX, rotY, rotZ)
 		local rad = math.rad
 		if type(cameraX) == "table" then
-			local camera = cameraX
+			local camera = cameraX --[[@as PineCamera]]
+			---@class CollapsedCamera
 			self.camera = {
 				camera.x or self.camera[1] or 0,
 				camera.y or self.camera[2] or 0,
@@ -1291,6 +1366,7 @@ local function newFrame(x1, y1, x2, y2)
 				self.camera[7],
 			}
 		else
+			---@class CollapsedCamera
 			self.camera = {
 				cameraX or self.camera[1] or 0,
 				cameraY or self.camera[2] or 0,
@@ -1306,17 +1382,27 @@ local function newFrame(x1, y1, x2, y2)
 		end
 	end
 
+	---Set the Field of View (degrees)
+	---@param FoV number in degrees
 	function frame:setFoV(FoV)
 		self.FoV = FoV or 90
 		self.t = tan(rad(self.FoV / 2)) * 2 * 0.0001
-		self:updateMappingConstants()
+		updateMappingConstants()
 		self.camera[7] = rad(self.FoV)
 	end
 
+	---If set to true, edges of triangles are colored differently to show the wireframe (useful for debugging)
+	---@param enabled boolean
 	function frame:setWireFrame(enabled)
 		self.buffer:useTriangleEdges(enabled)
 	end
 
+	---Get closest object and polygon trace
+	---@param objects PineObject[]
+	---@param x number
+	---@param y number
+	---@return number|nil objectIndex index of a PineObject that was found at the given coordinates in the given table
+	---@return number|nil polyIndex index of the Polygon in the Model of the PineObject if one was found
 	function frame:getObjectIndexTrace(objects, x, y)
 		local function sign(p1, p2, p3)
 			return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
@@ -1340,6 +1426,7 @@ local function newFrame(x1, y1, x2, y2)
 
 		local camera = self.camera
 
+		---@class CameraAngles
 		local cameraAngles = {
 			sin(camera[4] or 0), cos(camera[4] or 0),
 			sin(-camera[5]), cos(-camera[5]),
@@ -1368,11 +1455,11 @@ local function newFrame(x1, y1, x2, y2)
 			local oY = object[2]
 			local oZ = object[3]
 
-			local renderOffsetX = self.renderOffsetX
-			local renderOffsetY = self.renderOffsetY
+			local renderOffsetX = renderOffsetX
+			local renderOffsetY = renderOffsetY
 
-			local sXFactor = self.sXFactor
-			local sYFactor = self.sYFactor
+			local sXFactor = sXFactor
+			local sYFactor = sYFactor
 
 			local cA1 = cA1
 			local cA2 = cA2
@@ -1502,42 +1589,69 @@ local function newFrame(x1, y1, x2, y2)
 		return closestObject, closestPolygon
 	end
 
-	function frame:newObject(modelName, x, y, z, rotX, rotY, rotZ)
-		local model = nil
+	---Creates a new PineObject
+	---@param model string|Model either a string (path to the model file) or Model
+	---@param x number?
+	---@param y number?
+	---@param z number?
+	---@param rotX number?
+	---@param rotY number?
+	---@param rotZ number?
+	---@return PineObject
+	function frame:newObject(model, x, y, z, rotX, rotY, rotZ)
+		local objModel = nil
 		local modelSize = nil
 
-		if type(modelName) == "table" then
-			model, modelSize = self:loadModelRaw(modelName)
+		if type(model) == "table" then
+			---@cast model Model
+			objModel, modelSize = self:loadModelRaw(model)
 		else
-			local modelRaw = loadModel(modelName)
-			model, modelSize = self:loadModelRaw(modelRaw)
+			---@cast model string
+			local modelRaw = loadModel(model)
+			objModel, modelSize = self:loadModelRaw(modelRaw)
 		end
 
+		---@class PineObject
 		local object = {
 			x, y, z,
 			rotX, rotY, rotZ,
-			model, modelSize,
+			objModel, modelSize,
 		}
 		object.frame = self
-		function object:setPos(x, y, z)
-			self[1] = x or self[1]
-			self[2] = y or self[2]
-			self[3] = z or self[3]
+
+		---Set the object's position
+		---@param newX number?
+		---@param newY number?
+		---@param newZ number?
+		function object:setPos(newX, newY, newZ)
+			self[1] = newX or self[1]
+			self[2] = newY or self[2]
+			self[3] = newZ or self[3]
 		end
-		function object:setRot(rotX, rotY, rotZ)
-			self[4] = rotX or self[4]
-			self[5] = rotY or self[5]
-			self[6] = rotZ or self[6]
+
+		---Set the object's rotation
+		---@param newRotX number?
+		---@param newRotY number?
+		---@param newRotZ number?
+		function object:setRot(newRotX, newRotY, newRotZ)
+			self[4] = newRotX or self[4]
+			self[5] = newRotY or self[5]
+			self[6] = newRotZ or self[6]
 		end
-		function object:setModel(modelName)
-			if type(modelName) == "table" then
-				model, modelSize = self.frame:loadModelRaw(modelName)
-				self[7] = model
+
+		---Set the object's position
+		---@param ref string|Model either a string (path to the model file) or Model
+		function object:setModel(ref)
+			if type(ref) == "table" then
+				---@cast ref Model
+				objModel, modelSize = self.frame:loadModelRaw(ref)
+				self[7] = objModel
 				self[8] = modelSize
 			else
-				local modelRaw = loadModel(modelName)
-				model, modelSize = self.frame:loadModelRaw(modelRaw)
-				self[7] = model
+				---@cast ref string
+				local modelRaw = loadModel(ref)
+				objModel, modelSize = self.frame:loadModelRaw(modelRaw)
+				self[7] = objModel
 				self[8] = modelSize
 			end
 		end
@@ -1545,7 +1659,7 @@ local function newFrame(x1, y1, x2, y2)
 		return object
 	end
 
-	frame:updateMappingConstants()
+	updateMappingConstants()
 	frame:highResMode(true)
 
 	return frame
@@ -1553,14 +1667,19 @@ end
 
 local models = {}
 local function newPoly(x1, y1, z1, x2, y2, z2, x3, y3, z3, c)
-	return {
+	---@class Polygon
+	local poly = {
 		x1 = x1, y1 = y1, z1 = z1, x2 = x2, y2 = y2, z2 = z2, x3 = x3, y3 = y3, z3 = z3,
 		c = c,
 	}
+	return poly
 end
+
+---@param options {color: number?, top: number?, side: number?, side2: number?, bottom: number?, bottom2: number?}
 function models:cube(options)
 	options.color = options.color or colors.red
-	return {
+	---@class Model
+	local cube = {
 		newPoly(-.5,-.5,-.5, .5,-.5,.5, -.5,-.5,.5, options.bottom or options.color),
 		newPoly(-.5,-.5,-.5, .5,-.5,-.5, .5,-.5,.5, options.bottom2 or options.bottom or options.color),
 		newPoly(-.5,.5,-.5, -.5,.5,.5, .5,.5,.5, options.top or options.color),
@@ -1574,11 +1693,13 @@ function models:cube(options)
 		newPoly(-.5,-.5,.5, .5,-.5,.5, -.5,.5,.5, options.side or options.color),
 		newPoly(.5,-.5,.5, .5,.5,.5, -.5,.5,.5, options.side2 or options.side or options.color),
 	}
+	return cube
 end
+
 function models:sphere(options)
 	options.res = options.res or 32
 	options.color = options.color or colors.red
-	local stepSize = 1/options.res
+	---@class Model
 	local model = {}
 	local prevPoints = {}
 	for i = 0, options.res do
@@ -1664,6 +1785,7 @@ function models:icosphere(options)
 		return newPoly(v[i1][1], v[i1][2], v[i1][3], v[i2][1], v[i2][2], v[i2][3], v[i3][1], v[i3][2], v[i3][3], options.colors and 1 or options.color)
 	end
 
+	---@class Model
 	local model = {
 		buildPoly(11, 2, 12),
 		buildPoly(11, 8, 2),
@@ -1762,10 +1884,12 @@ function models:plane(options)
 	options.color = options.color or colors.lime
 	options.size = options.size or 1
 	options.y = options.y or 0
-	return {
+	---@class Model
+	local plane = {
 		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, -1 * options.size, -1 * options.size, options.y, -1 * options.size, options.color),
 		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, -1 * options.size, options.color),
 	}
+	return plane
 end
 function models:mountains(options)
 	options.res = options.res or 20
@@ -1780,6 +1904,7 @@ function models:mountains(options)
 	local minHeight = 3/options.res * options.height / (options.randomHeight + 1)
 	local maxHeight = 3/options.res * options.height * (options.randomHeight + 1)
 
+	---@class Model
 	local model = {}
 	for i = 0, options.res do
 		local offset = math.random(-options.randomOffset*100, options.randomOffset*100)/100
@@ -1841,6 +1966,7 @@ function transforms:invertTriangles(model)
 		error("transforms:invertTriangles expected arg#1 to be a table (model)")
 	end
 
+	---@class Model
 	local newModel = {}
 	for i = 1, #model do
 		local triangle = model[i]
@@ -1864,17 +1990,22 @@ function transforms:invertTriangles(model)
 	end
 	return newModel
 end
-function transforms:setOutline(model, options)
+
+---Change the outline colors of polygons in a Model
+---@param model Model
+---@param col number|table if number, will set the outline color for each Polygon, if table, uses it as a mapping from Polygon color to new outline color
+---@return Model
+function transforms:setOutline(model, col)
 	if not model or type(model) ~= "table" then
 		error("transforms:invertTriangles expected arg#1 to be a table (model)")
 	end
 
 	for i = 1, #model do
 		local triangle = model[i]
-		if type(options) == "table" then -- colormap
-			triangle.outlineColor = options[triangle.c] or triangle.outlineColor
+		if type(col) == "table" then -- colormap
+			triangle.outlineColor = col[triangle.c] or triangle.outlineColor
 		else
-			triangle.outlineColor = options
+			triangle.outlineColor = col
 		end
 	end
 	return model

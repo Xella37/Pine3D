@@ -1,5 +1,14 @@
 {
     "Lua.workspace.userThirdParty": [
         "C:\\Users\\Xelo\\Documents\\lua_environments"
+    ],
+    "Lua.diagnostics.globals": [
+        "colors",
+        "term",
+        "window",
+        "bit",
+        "textutils",
+        "fs",
+        "sleep"
     ]
 }
