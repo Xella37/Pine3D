@@ -735,6 +735,246 @@ local function sortObjects(objects, camera)
 	end
 end
 
+local transforms = {}
+---Model Inverts the direction of all triangles
+---@param model Model
+---@return Model
+function transforms.invertTriangles(model)
+	if not model or type(model) ~= "table" then
+		error("transforms.invertTriangles expected arg#1 to be a table (model)")
+	end
+
+	---@class Model
+	local newModel = {}
+	for i = 1, #model do
+		local triangle = model[i]
+		local newTriangle = {
+			x1 = triangle.x1,
+			y1 = triangle.y1,
+			z1 = triangle.z1,
+			x2 = triangle.x3,
+			y2 = triangle.y3,
+			z2 = triangle.z3,
+			x3 = triangle.x2,
+			y3 = triangle.y2,
+			z3 = triangle.z2,
+			c = triangle.c,
+			char = triangle.char,
+			charc = triangle.charc,
+			forceRender = triangle.forceRender,
+			outlineColor = triangle.outlineColor,
+		}
+		newModel[i] = newTriangle
+	end
+	return newModel
+end
+
+---Change the outline colors of polygons in a Model
+---@param model Model
+---@param col number|table if number, will set the outline color for each Polygon, if table, uses it as a mapping from Polygon color to new outline color
+---@return Model
+function transforms.setOutline(model, col)
+	if not model or type(model) ~= "table" then
+		error("transforms.invertTriangles expected arg#1 to be a table (model)")
+	end
+
+	for i = 1, #model do
+		local triangle = model[i]
+		if type(col) == "table" then -- colormap
+			triangle.outlineColor = col[triangle.c] or triangle.outlineColor
+		else
+			triangle.outlineColor = col
+		end
+	end
+	return model
+end
+
+---Change the colors of polygons in a Model
+---@param model Model
+---@param col number|table if number, will set the color for each Polygon, if table, uses it as a mapping from Polygon color to new the new color
+---@return Model
+function transforms.mapColor(model, col)
+	if not model or type(model) ~= "table" then
+		error("transforms.mapColor expected arg#1 to be a table (model)")
+	end
+
+	for i = 1, #model do
+		local triangle = model[i]
+		if type(col) == "table" then -- colormap
+			triangle.c = col[triangle.c] or triangle.c
+		else
+			triangle.c = col
+		end
+	end
+	return model
+end
+
+---Center the Model such that the origin is in the middle of the bounding box
+---@param model Model
+function transforms.center(model)
+	local minX, maxX = math.huge, -math.huge
+	local minY, maxY = math.huge, -math.huge
+	local minZ, maxZ = math.huge, -math.huge
+
+	for i = 1, #model do
+		local poly = model[i]
+		minX, maxX = min(minX, poly.x1), max(maxX, poly.x1)
+		minX, maxX = min(minX, poly.x2), max(maxX, poly.x2)
+		minX, maxX = min(minX, poly.x3), max(maxX, poly.x3)
+		minY, maxY = min(minY, poly.y1), max(maxY, poly.y1)
+		minY, maxY = min(minY, poly.y2), max(maxY, poly.y2)
+		minY, maxY = min(minY, poly.y3), max(maxY, poly.y3)
+		minZ, maxZ = min(minZ, poly.z1), max(maxZ, poly.z1)
+		minZ, maxZ = min(minZ, poly.z2), max(maxZ, poly.z2)
+		minZ, maxZ = min(minZ, poly.z3), max(maxZ, poly.z3)
+	end
+
+	local offsetX = -(maxX + minX)*0.5
+	local offsetY = -(maxY + minY)*0.5
+	local offsetZ = -(maxZ + minZ)*0.5
+
+	for i = 1, #model do
+		local poly = model[i]
+		poly.x1 = poly.x1 + offsetX
+		poly.x2 = poly.x2 + offsetX
+		poly.x3 = poly.x3 + offsetX
+		poly.y1 = poly.y1 + offsetY
+		poly.y2 = poly.y2 + offsetY
+		poly.y3 = poly.y3 + offsetY
+		poly.z1 = poly.z1 + offsetZ
+		poly.z2 = poly.z2 + offsetZ
+		poly.z3 = poly.z3 + offsetZ
+	end
+
+	return model
+end
+
+---Rescales the model such that the largest value of any coordinate is equal to 1
+---@param model Model
+function transforms.normalizeScale(model)
+	local maxVal = -math.huge
+
+	for i = 1, #model do
+		local poly = model[i]
+		maxVal = max(maxVal, poly.x1)
+		maxVal = max(maxVal, poly.x2)
+		maxVal = max(maxVal, poly.x3)
+		maxVal = max(maxVal, poly.y1)
+		maxVal = max(maxVal, poly.y2)
+		maxVal = max(maxVal, poly.y3)
+		maxVal = max(maxVal, poly.z1)
+		maxVal = max(maxVal, poly.z2)
+		maxVal = max(maxVal, poly.z3)
+	end
+
+	for i = 1, #model do
+		local poly = model[i]
+		poly.x1 = poly.x1 / maxVal
+		poly.x2 = poly.x2 / maxVal
+		poly.x3 = poly.x3 / maxVal
+		poly.y1 = poly.y1 / maxVal
+		poly.y2 = poly.y2 / maxVal
+		poly.y3 = poly.y3 / maxVal
+		poly.z1 = poly.z1 / maxVal
+		poly.z2 = poly.z2 / maxVal
+		poly.z3 = poly.z3 / maxVal
+	end
+
+	return model
+end
+
+---Similar to normalizeScale, rescales the model, but only uses the y coordinate to determine how much it is scaled (normalizes height)
+---@param model Model
+function transforms.normalizeScaleY(model)
+	local maxVal = -math.huge
+
+	for i = 1, #model do
+		local poly = model[i]
+		maxVal = max(maxVal, poly.y1)
+		maxVal = max(maxVal, poly.y2)
+		maxVal = max(maxVal, poly.y3)
+	end
+
+	for i = 1, #model do
+		local poly = model[i]
+		poly.x1 = poly.x1 / maxVal
+		poly.x2 = poly.x2 / maxVal
+		poly.x3 = poly.x3 / maxVal
+		poly.y1 = poly.y1 / maxVal
+		poly.y2 = poly.y2 / maxVal
+		poly.y3 = poly.y3 / maxVal
+		poly.z1 = poly.z1 / maxVal
+		poly.z2 = poly.z2 / maxVal
+		poly.z3 = poly.z3 / maxVal
+	end
+
+	return model
+end
+
+---Scales the model
+---@param model Model
+---@param scale number
+function transforms.scale(model, scale)
+	for i = 1, #model do
+		local poly = model[i]
+		poly.x1 = poly.x1 * scale
+		poly.x2 = poly.x2 * scale
+		poly.x3 = poly.x3 * scale
+		poly.y1 = poly.y1 * scale
+		poly.y2 = poly.y2 * scale
+		poly.y3 = poly.y3 * scale
+		poly.z1 = poly.z1 * scale
+		poly.z2 = poly.z2 * scale
+		poly.z3 = poly.z3 * scale
+	end
+
+	return model
+end
+
+---Translates the model
+---@param model Model
+---@param dx number?
+---@param dy number?
+---@param dz number?
+function transforms.translate(model, dx, dy, dz)
+	for i = 1, #model do
+		local poly = model[i]
+		poly.x1 = poly.x1 + (dx or 0)
+		poly.x2 = poly.x2 + (dx or 0)
+		poly.x3 = poly.x3 + (dx or 0)
+		poly.y1 = poly.y1 + (dy or 0)
+		poly.y2 = poly.y2 + (dy or 0)
+		poly.y3 = poly.y3 + (dy or 0)
+		poly.z1 = poly.z1 + (dz or 0)
+		poly.z2 = poly.z2 + (dz or 0)
+		poly.z3 = poly.z3 + (dz or 0)
+	end
+
+	return model
+end
+
+---Translates the model such that the bottom aligns with y = 0
+---@param model Model
+function transforms.alignBottom(model)
+	local minY = math.huge
+
+	for i = 1, #model do
+		local poly = model[i]
+		minY = min(minY, poly.y1)
+		minY = min(minY, poly.y2)
+		minY = min(minY, poly.y3)
+	end
+
+	for i = 1, #model do
+		local poly = model[i]
+		poly.y1 = poly.y1 - minY
+		poly.y2 = poly.y2 - minY
+		poly.y3 = poly.y3 - minY
+	end
+
+	return model
+end
+
 ---@param path string
 local function loadModel(path)
 	local modelFile = fs.open(path, "r")
@@ -745,7 +985,21 @@ local function loadModel(path)
 	modelFile.close()
 
 	---@class Model
+	---@field invertTriangles fun(self: Model): Model Inverts the direction of all triangles
+	---@field setOutline fun(self: Model, col: number|table): Model Change the outline colors of polygons in a Model. If number, will set the outline color for each Polygon, if table, uses it as a mapping from Polygon color to new outline color
+	---@field mapColor fun(self: Model, col: number|table): Model Change the colors of polygons in a Model. If number, will set the color for each Polygon, if table, uses it as a mapping from Polygon color to new the new color
+	---@field center fun(self: Model): Model Center the Model such that the origin is in the middle of the bounding box
+	---@field normalizeScale fun(self: Model): Model Rescales the model such that the largest value of any coordinate is equal to 1
+	---@field normalizeScaleY fun(self: Model): Model Similar to normalizeScale, rescales the model, but only uses the y coordinate to determine how much it is scaled (normalizes height)
+	---@field scale fun(self: Model, scale: number): Model Scales the model
+	---@field translate fun(self: Model, dx: number?, dy: number?, dz: number?): Model Translates the model
+	---@field alignBottom fun(self: Model): Model Translates the model such that the bottom aligns with y = 0
 	local model = textutils.unserialise(content)
+
+	for name, func in pairs(transforms) do
+		model[name] = func
+	end
+
 	return model
 end
 
@@ -1955,57 +2209,6 @@ function models:mountains(options)
 				}
 				model[#model+1] = snowPolygon
 			end
-		end
-	end
-	return model
-end
-
-local transforms = {}
-function transforms:invertTriangles(model)
-	if not model or type(model) ~= "table" then
-		error("transforms:invertTriangles expected arg#1 to be a table (model)")
-	end
-
-	---@class Model
-	local newModel = {}
-	for i = 1, #model do
-		local triangle = model[i]
-		local newTriangle = {
-			x1 = triangle.x1,
-			y1 = triangle.y1,
-			z1 = triangle.z1,
-			x2 = triangle.x3,
-			y2 = triangle.y3,
-			z2 = triangle.z3,
-			x3 = triangle.x2,
-			y3 = triangle.y2,
-			z3 = triangle.z2,
-			c = triangle.c,
-			char = triangle.char,
-			charc = triangle.charc,
-			forceRender = triangle.forceRender,
-			outlineColor = triangle.outlineColor,
-		}
-		newModel[i] = newTriangle
-	end
-	return newModel
-end
-
----Change the outline colors of polygons in a Model
----@param model Model
----@param col number|table if number, will set the outline color for each Polygon, if table, uses it as a mapping from Polygon color to new outline color
----@return Model
-function transforms:setOutline(model, col)
-	if not model or type(model) ~= "table" then
-		error("transforms:invertTriangles expected arg#1 to be a table (model)")
-	end
-
-	for i = 1, #model do
-		local triangle = model[i]
-		if type(col) == "table" then -- colormap
-			triangle.outlineColor = col[triangle.c] or triangle.outlineColor
-		else
-			triangle.outlineColor = col
 		end
 	end
 	return model
