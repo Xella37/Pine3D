@@ -617,13 +617,13 @@ local function rotatePolygonZ(x, y, z, rotS, rotC)
 	return x, y
 end
 
----Rotates a given model around three axes
+---Rotates a given CollapsedModel around three axes
 ---@param model CollapsedModel
 ---@param rotX number?
 ---@param rotY number?
 ---@param rotZ number?
 ---@return CollapsedModel
-local function rotateModel(model, rotX, rotY, rotZ)
+local function rotateCollapsedModel(model, rotX, rotY, rotZ)
 	local rotXS, rotXC = 0, 1
 	local rotYS, rotYC = 0, 1
 	local rotZS, rotZC = 0, 1
@@ -953,6 +953,57 @@ function transforms.translate(model, dx, dy, dz)
 	return model
 end
 
+---Rotates a given Model around three axes
+---@param model Model
+---@param rotX number? in radians
+---@param rotY number? in radians
+---@param rotZ number? in radians
+---@return Model
+function transforms.rotate(model, rotX, rotY, rotZ)
+	local rotXS, rotXC = 0, 1
+	local rotYS, rotYC = 0, 1
+	local rotZS, rotZC = 0, 1
+
+	if rotX == 0 then rotX = nil end
+	if rotX then rotXS, rotXC = sin(rotX), cos(rotX) end
+	if rotY == 0 then rotY = nil end
+	if rotY then rotYS, rotYC = sin(rotY), cos(rotY) end
+	if rotZ == 0 then rotZ = nil end
+	if rotZ then rotZS, rotZC = sin(rotZ), cos(rotZ) end
+
+	for i = 1, #model do
+		local polygon = model[i]
+
+		local x1, y1, z1 = polygon.x1, polygon.y1, polygon.z1
+		local x2, y2, z2 = polygon.x2, polygon.y2, polygon.z2
+		local x3, y3, z3 = polygon.x3, polygon.y3, polygon.z3
+		
+		if rotY then
+			x1, y1, z1 = rotatePolygonY(x1, y1, z1, rotYS, rotYC)
+			x2, y2, z2 = rotatePolygonY(x2, y2, z2, rotYS, rotYC)
+			x3, y3, z3 = rotatePolygonY(x3, y3, z3, rotYS, rotYC)
+		end
+
+		if rotZ then
+			x1, y1 = rotatePolygonZ(x1, y1, z1, rotZS, rotZC)
+			x2, y2 = rotatePolygonZ(x2, y2, z2, rotZS, rotZC)
+			x3, y3 = rotatePolygonZ(x3, y3, z3, rotZS, rotZC)
+		end
+
+		if rotX then
+			x1, y1, z1 = rotatePolygonX(x1, y1, z1, rotXS, rotXC)
+			x2, y2, z2 = rotatePolygonX(x2, y2, z2, rotXS, rotXC)
+			x3, y3, z3 = rotatePolygonX(x3, y3, z3, rotXS, rotXC)
+		end
+
+		polygon.x1, polygon.y1, polygon.z1 = x1, y1, z1
+		polygon.x2, polygon.y2, polygon.z2 = x2, y2, z2
+		polygon.x3, polygon.y3, polygon.z3 = x3, y3, z3
+	end
+
+	return model
+end
+
 ---Translates the model such that the bottom aligns with y = 0
 ---@param model Model
 function transforms.alignBottom(model)
@@ -993,6 +1044,7 @@ local function loadModel(path)
 	---@field normalizeScaleY fun(self: Model): Model Similar to normalizeScale, rescales the model, but only uses the y coordinate to determine how much it is scaled (normalizes height)
 	---@field scale fun(self: Model, scale: number): Model Scales the model
 	---@field translate fun(self: Model, dx: number?, dy: number?, dz: number?): Model Translates the model
+	---@field rotate fun(self: Model, rotX: number?, rotY: number?, rotZ: number?): Model Rotates a given Model around three axes (radians)
 	---@field alignBottom fun(self: Model): Model Translates the model such that the bottom aligns with y = 0
 	local model = textutils.unserialise(content)
 
@@ -1245,7 +1297,7 @@ local function newFrame(x1, y1, x2, y2)
 		local rotY = object[5]
 		local rotZ = object[6]
 		if (rotX and rotX ~= 0) or (rotY and rotY ~= 0) or (rotZ and rotZ ~= 0) then
-			model = rotateModel(model, rotX, rotY, rotZ)
+			model = rotateCollapsedModel(model, rotX, rotY, rotZ)
 		end
 		sortPolygons(model, oX, oY, oZ, camera)
 
@@ -1702,7 +1754,7 @@ local function newFrame(x1, y1, x2, y2)
 			local rotY = object[5]
 			local rotZ = object[6]
 			if (rotX and rotX ~= 0) or (rotY and rotY ~= 0) or (rotZ and rotZ ~= 0) then
-				model = rotateModel(model, rotX, rotY, rotZ)
+				model = rotateCollapsedModel(model, rotX, rotY, rotZ)
 			end
 
 			local oX = object[1]
