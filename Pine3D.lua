@@ -2387,6 +2387,7 @@ function models:cube(options)
 	return cube
 end
 
+---@param options {res: number?, color: number?, color2: number?, colors: number?, top: number?, bottom: number?}
 function models:sphere(options)
 	options.res = options.res or 32
 	options.color = options.color or colors.red
@@ -2453,6 +2454,7 @@ function models:sphere(options)
 
 	return model
 end
+---@param options {res: number?, color: number?, color2: number?, colors: number?, top: number?, bottom: number?, colorsFractal: boolean?}
 function models:icosphere(options)
 	options.res = options.res or 1
 
@@ -2571,6 +2573,7 @@ function models:icosphere(options)
 
 	return model
 end
+---@param options {size: number?, color: number?, y: number?}
 function models:plane(options)
 	options.color = options.color or colors.lime
 	options.size = options.size or 1
@@ -2582,6 +2585,7 @@ function models:plane(options)
 	}
 	return plane
 end
+---@param options {res: number?, randomOffset: number?, height: number?, randomHeight: number?, y: number?, scale: number?, color: number?, snowColor: number?, snow: number?, snowHeight: number?}
 function models:mountains(options)
 	options.res = options.res or 20
 	options.randomOffset = options.randomOffset or 0
