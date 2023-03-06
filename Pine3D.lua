@@ -426,10 +426,10 @@ local function newBuffer(x1, y1, x2, y2)
 				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
 				if xB < xA then xA, xB = xB, xA end
 
-				if xA < 1 then xA = 1 end
-				if xA > frameWidth then xA = frameWidth end
-				if xB < 1 then xB = 1 end
-				if xB > frameWidth then xB = frameWidth end
+				if xA < 1 then xA = 0 end
+				if xA > frameWidth then xA = frameWidth + 1 end
+				if xB < 1 then xB = 0 end
+				if xB > frameWidth then xB = frameWidth + 1 end
 
 				for x = floor(xA+0.5), floor(xB+0.5) do
 					c2Y[x] = c
@@ -448,10 +448,10 @@ local function newBuffer(x1, y1, x2, y2)
 				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
 				if xB < xA then xA, xB = xB, xA end
 
-				if xA < 1 then xA = 1 end
-				if xA > frameWidth then xA = frameWidth end
-				if xB < 1 then xB = 1 end
-				if xB > frameWidth then xB = frameWidth end
+				if xA < 1 then xA = 0 end
+				if xA > frameWidth then xA = frameWidth + 1 end
+				if xB < 1 then xB = 0 end
+				if xB > frameWidth then xB = frameWidth + 1 end
 
 				for x = floor(xA+0.5), floor(xB+0.5) do
 					c2Y[x] = c
