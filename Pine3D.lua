@@ -418,40 +418,44 @@ local function newBuffer(x1, y1, x2, y2)
 		local x2_x1_div_y2_y1 = (x2 - x1) / (y2 - y1)
 		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
 
-		for y = minY, midY do
-			local c2Y = c2[y]
+		if y1 ~= y2 and y1 ~= y3 then
+			for y = minY, midY do
+				local c2Y = c2[y]
 
-			local xA = (y - y1) * x2_x1_div_y2_y1 + x1
-			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-			if xB < xA then xA, xB = xB, xA end
+				local xA = (y - y1) * x2_x1_div_y2_y1 + x1
+				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+				if xB < xA then xA, xB = xB, xA end
 
-			if xA < 1 then xA = 1 end
-			if xA > frameWidth then xA = frameWidth end
-			if xB < 1 then xB = 1 end
-			if xB > frameWidth then xB = frameWidth end
+				if xA < 1 then xA = 1 end
+				if xA > frameWidth then xA = frameWidth end
+				if xB < 1 then xB = 1 end
+				if xB > frameWidth then xB = frameWidth end
 
-			for x = floor(xA+0.5), floor(xB+0.5) do
-				c2Y[x] = c
+				for x = floor(xA+0.5), floor(xB+0.5) do
+					c2Y[x] = c
+				end
 			end
 		end
 
 		local x3_x2_div_y3_y2 = (x3 - x2) / (y3 - y2)
 		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
 
-		for y = midY+1, maxY do
-			local c2Y = c2[y]
+		if y3 ~= y2 and y1 ~= y3 then
+			for y = midY+1, maxY do
+				local c2Y = c2[y]
 
-			local xA = (y - y2) * x3_x2_div_y3_y2 + x2
-			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-			if xB < xA then xA, xB = xB, xA end
+				local xA = (y - y2) * x3_x2_div_y3_y2 + x2
+				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+				if xB < xA then xA, xB = xB, xA end
 
-			if xA < 1 then xA = 1 end
-			if xA > frameWidth then xA = frameWidth end
-			if xB < 1 then xB = 1 end
-			if xB > frameWidth then xB = frameWidth end
+				if xA < 1 then xA = 1 end
+				if xA > frameWidth then xA = frameWidth end
+				if xB < 1 then xB = 1 end
+				if xB > frameWidth then xB = frameWidth end
 
-			for x = floor(xA+0.5), floor(xB+0.5) do
-				c2Y[x] = c
+				for x = floor(xA+0.5), floor(xB+0.5) do
+					c2Y[x] = c
+				end
 			end
 		end
 
@@ -672,32 +676,32 @@ local function rotateCollapsedModel(model, rotX, rotY, rotZ)
 	return rotatedModel
 end
 
-local function swap9(a, b, table)
+local function swap10(a, b, table)
 	if table[a] == nil or table[b] == nil then
 		return false
 	end
-	if table[a][9] < table[b][9] then
+	if table[a][10] < table[b][10] then
 		table[a], table[b] = table[b], table[a]
 		return true
 	end
 	return false
 end
 
-local function bubblesort9(array)
+local function bubblesort10(array)
 	for i = 1, #array do
 		local ci = i
-		while swap9(ci, ci+1, array) do
+		while swap10(ci, ci+1, array) do
 			ci = ci - 1
 		end
 	end
 end
 
-local function getCorrect9(array)
+local function getCorrect10(array)
 	local n = #array
 	local correct = 0
-	local prevVal = array[1][9]
+	local prevVal = array[1][10]
 	for i = 2, n do
-		local val = array[i][9]
+		local val = array[i][10]
 		if val <= prevVal then
 			correct = correct + 1
 		end
@@ -722,16 +726,16 @@ local function sortObjects(objects, camera)
 		local dY = oY and (oY - cY) or 0
 		local dZ = oZ and (oZ - cZ) or 0
 
-		object[9] = dX*dX + dY*dY + dZ*dZ -- relative distance
+		object[10] = dX*dX + dY*dY + dZ*dZ -- relative distance
 	end
 
-	local correctRatio = getCorrect9(objects)
+	local correctRatio = getCorrect10(objects)
 
 	if correctRatio == 1 then
 	elseif correctRatio > 0.7 then
-		bubblesort9(objects)
+		bubblesort10(objects)
 	else
-		sort(objects, function(a, b) return a[9] > b[9] end)
+		sort(objects, function(a, b) return a[10] > b[10] end)
 	end
 end
 
@@ -744,11 +748,33 @@ function transforms.invertTriangles(model)
 		error("transforms.invertTriangles expected arg#1 to be a table (model)")
 	end
 
-	---@class Model
-	local newModel = {}
+	-- ---@class Model
+	-- local newModel = {}
+	-- for i = 1, #model do
+	-- 	local triangle = model[i]
+	-- 	local newTriangle = {
+	-- 		x1 = triangle.x1,
+	-- 		y1 = triangle.y1,
+	-- 		z1 = triangle.z1,
+	-- 		x2 = triangle.x3,
+	-- 		y2 = triangle.y3,
+	-- 		z2 = triangle.z3,
+	-- 		x3 = triangle.x2,
+	-- 		y3 = triangle.y2,
+	-- 		z3 = triangle.z2,
+	-- 		c = triangle.c,
+	-- 		char = triangle.char,
+	-- 		charc = triangle.charc,
+	-- 		forceRender = triangle.forceRender,
+	-- 		outlineColor = triangle.outlineColor,
+	-- 	}
+	-- 	newModel[i] = newTriangle
+	-- end
+	-- return newModel
+
 	for i = 1, #model do
 		local triangle = model[i]
-		local newTriangle = {
+		model[i] = {
 			x1 = triangle.x1,
 			y1 = triangle.y1,
 			z1 = triangle.z1,
@@ -764,9 +790,8 @@ function transforms.invertTriangles(model)
 			forceRender = triangle.forceRender,
 			outlineColor = triangle.outlineColor,
 		}
-		newModel[i] = newTriangle
 	end
-	return newModel
+	return model
 end
 
 ---Change the outline colors of polygons in a Model
@@ -977,7 +1002,7 @@ function transforms.rotate(model, rotX, rotY, rotZ)
 		local x1, y1, z1 = polygon.x1, polygon.y1, polygon.z1
 		local x2, y2, z2 = polygon.x2, polygon.y2, polygon.z2
 		local x3, y3, z3 = polygon.x3, polygon.y3, polygon.z3
-		
+
 		if rotY then
 			x1, y1, z1 = rotatePolygonY(x1, y1, z1, rotYS, rotYC)
 			x2, y2, z2 = rotatePolygonY(x2, y2, z2, rotYS, rotYC)
@@ -1026,8 +1051,393 @@ function transforms.alignBottom(model)
 	return model
 end
 
+---Triangle decimation (reduce the quality / number of polygons in a model), default mode "ratio"
+---@param model Model
+---@param quality number
+---@param mode? "ratio"|"polys"
+---@return Model
+function transforms.decimate(model, quality, mode)
+	-- convert model format
+
+	local vertices = {}
+	local triangles = {}
+
+	local function findVertex(x, y, z)
+		for i = #vertices, 1, -1 do
+			local vertex = vertices[i]
+			if vertex[1] == x and vertex[2] == y and vertex[3] == z then
+				return i
+			end
+		end
+	end
+
+	for i = 1, #model do
+		local poly = model[i]
+
+		local i1 = findVertex(poly.x1, poly.y1, poly.z1)
+		if not i1 then
+			vertices[#vertices+1] = {poly.x1, poly.y1, poly.z1}
+			i1 = #vertices
+		end
+
+		local i2 = findVertex(poly.x2, poly.y2, poly.z2)
+		if not i2 then
+			vertices[#vertices+1] = {poly.x2, poly.y2, poly.z2}
+			i2 = #vertices
+		end
+
+		local i3 = findVertex(poly.x3, poly.y3, poly.z3)
+		if not i3 then
+			vertices[#vertices+1] = {poly.x3, poly.y3, poly.z3}
+			i3 = #vertices
+		end
+
+		local triangle = {i1, i2, i3, poly.c, poly.char, poly.charc, poly.forceRender}
+		triangles[#triangles+1] = triangle
+	end
+
+	-- actually decimate
+
+	local function getDistance(v1, v2)
+		local dx = v1[1] - v2[1]
+		local dy = v1[2] - v2[2]
+		local dz = v1[3] - v2[3]
+		return (dx*dx + dy*dy + dz*dz)^0.5
+	end
+
+	---@type EdgeCandidate[]
+	local candidateEdges = {}
+	for i = 1, #triangles do
+		local triangle = triangles[i]
+		local edge1Length = getDistance(
+			vertices[triangle[1]],
+			vertices[triangle[2]]
+		)
+		local edge2Length = getDistance(
+			vertices[triangle[2]],
+			vertices[triangle[3]]
+		)
+		local edge3Length = getDistance(
+			vertices[triangle[1]],
+			vertices[triangle[3]]
+		)
+
+		---@class EdgeCandidate
+		candidateEdges[#candidateEdges+1] = {
+			length = edge1Length,
+			vA = triangle[1],
+			vB = triangle[2],
+		}
+
+		candidateEdges[#candidateEdges+1] = {
+			length = edge2Length,
+			vA = triangle[2],
+			vB = triangle[3],
+		}
+
+		candidateEdges[#candidateEdges+1] = {
+			length = edge3Length,
+			vA = triangle[1],
+			vB = triangle[3],
+		}
+	end
+
+	local function collapseEdge(vA, vB)
+		local vertex1 = vertices[vA]
+		local vertex2 = vertices[vB]
+		local vertexNew = { -- TODO: Maybe don't use average position, but offset in a smart way?
+			(vertex1[1] + vertex2[1])*0.5,
+			(vertex1[2] + vertex2[2])*0.5,
+			(vertex1[3] + vertex2[3])*0.5,
+		}
+		vertices[#vertices+1] = vertexNew
+		local vNew = #vertices
+
+		for i = #triangles, 1, -1 do
+			local tri = triangles[i]
+			if tri[1] == vA or tri[1] == vB or tri[2] == vA or tri[2] == vB or tri[3] == vA or tri[3] == vB then
+				-- triangle contains at least one of the vertices being collapsed
+
+				if tri[1] == vA or tri[1] == vB then
+					tri[1] = vNew
+				end
+				if tri[2] == vA or tri[2] == vB then
+					tri[2] = vNew
+				end
+				if tri[3] == vA or tri[3] == vB then
+					tri[3] = vNew
+				end
+
+				if tri[1] == tri[2] or tri[2] == tri[3] or tri[1] == tri[3] then
+					-- no longer valid triangle
+					table.remove(triangles, i)
+				end
+			end
+		end
+
+		return vNew
+	end
+
+	local maxTriangles = quality
+	if mode ~= "polys" then
+		maxTriangles = (#model) * quality
+	end
+	while #triangles > maxTriangles do
+		-- find smallest edge
+		local smallestLength = math.huge
+		local smallestIndex
+		for i = 1, #candidateEdges do
+			local candidate = candidateEdges[i]
+			if candidate.length < smallestLength then
+				smallestLength = candidate.length
+				smallestIndex = i
+			end
+		end
+		local smallestCandidate = candidateEdges[smallestIndex]
+
+		-- collapse smallest edge
+		local vNew = collapseEdge(smallestCandidate.vA, smallestCandidate.vB)
+
+		-- remove now invalid candidate edges
+		for i = #candidateEdges, 1, -1 do
+			local candidate = candidateEdges[i]
+			local replaced1 = candidate.vA == smallestCandidate.vA or candidate.vA == smallestCandidate.vB
+			local replaced2 = candidate.vB == smallestCandidate.vA or candidate.vB == smallestCandidate.vB
+			if replaced1 and replaced2 then
+				table.remove(candidateEdges, i)
+			elseif replaced1 then
+				candidate.vA = vNew
+			elseif replaced2 then
+				candidate.vB = vNew
+			end
+		end
+	end
+
+	-- build new model
+
+	---@class Model
+	---@field invertTriangles fun(self: Model): Model Inverts the direction of all triangles
+	---@field setOutline fun(self: Model, col: number|table): Model Change the outline colors of polygons in a Model. If number, will set the outline color for each Polygon, if table, uses it as a mapping from Polygon color to new outline color
+	---@field mapColor fun(self: Model, col: number|table): Model Change the colors of polygons in a Model. If number, will set the color for each Polygon, if table, uses it as a mapping from Polygon color to new the new color
+	---@field center fun(self: Model): Model Center the Model such that the origin is in the middle of the bounding box
+	---@field normalizeScale fun(self: Model): Model Rescales the model such that the largest value of any coordinate is equal to 1
+	---@field normalizeScaleY fun(self: Model): Model Similar to normalizeScale, rescales the model, but only uses the y coordinate to determine how much it is scaled (normalizes height)
+	---@field scale fun(self: Model, scale: number): Model Scales the model
+	---@field translate fun(self: Model, dx: number?, dy: number?, dz: number?): Model Translates the model
+	---@field rotate fun(self: Model, rotX: number?, rotY: number?, rotZ: number?): Model Rotates a given Model around three axes (radians)
+	---@field alignBottom fun(self: Model): Model Translates the model such that the bottom aligns with y = 0
+	---@field decimate fun(self: Model, quality: number, mode?: "ratio"|"polys"): Model Triangle decimation (reduce the quality / number of polygons in a model)
+	---@field toLoD fun(self: Model, settings: {minQuality: number?, variantCount: number?, qualityHalvingDistance: number?, quickInitWorseRuntime: boolean?}?): LoDModel Create a new Level of Detail Model
+	local newModel = {}
+
+	for i = 1, #triangles do
+		local triangle = triangles[i]
+		local v1 = vertices[triangle[1]]
+		local v2 = vertices[triangle[2]]
+		local v3 = vertices[triangle[3]]
+
+		newModel[#newModel+1] = {
+			x1 = v1[1],
+			y1 = v1[2],
+			z1 = v1[3],
+			x2 = v2[1],
+			y2 = v2[2],
+			z2 = v2[3],
+			x3 = v3[1],
+			y3 = v3[2],
+			z3 = v3[3],
+			c = triangle[4],
+			char = triangle[5],
+			charc = triangle[6],
+			forceRender = triangle[7],
+		}
+	end
+
+	for name, func in pairs(transforms) do
+		newModel[name] = func
+	end
+
+	return newModel
+end
+
+local loadModel, loadModelRaw
+
+---Create a new Level of Detail Model
+---@param settings {minQuality: number?, variantCount: number?, qualityHalvingDistance: number?, quickInitWorseRuntime: boolean?}?
+---@return LoDModel
+function transforms.toLoD(model, settings)
+	settings = settings or {}
+
+	---@class LoDModel
+	local LoDModel = {
+		minQuality = settings.minQuality or 0.1,
+		variantCount = settings.variantCount or 4,
+		qualityHalvingDistance = settings.qualityHalvingDistance or 5,
+		quickInitWorseRuntime = settings.quickInitWorseRuntime or false,
+	}
+
+	local objModel, modelSize = loadModelRaw(model)
+
+	---@type LoDVariant[]
+	local modelVariants = {
+		{
+			quality = 1,
+			collapsedModel = objModel,
+			size = modelSize,
+		}
+	}
+
+	local prevQuality = model
+	local originalPolyCount = #prevQuality
+
+	for i = 1, LoDModel.variantCount do
+		local quality = (1 - LoDModel.minQuality) * (1 - i / LoDModel.variantCount) + LoDModel.minQuality
+
+		local polyCount = math.floor(originalPolyCount*quality + 0.5)
+		local decreasedQualityModel = prevQuality:decimate(polyCount, "polys")
+		local objModel, modelSize = loadModelRaw(decreasedQualityModel)
+		prevQuality = decreasedQualityModel
+
+		---@class LoDVariant
+		local var = {
+			quality = quality,
+			collapsedModel = objModel,
+			size = modelSize,
+		}
+
+		modelVariants[#modelVariants+1] = var
+	end
+
+	local function copyVariants(vars)
+		local newVars = {}
+		for i = 1, #vars do
+			local var = vars[i]
+			local model = var.collapsedModel
+
+			local modelNew = {}
+			for j = 1, #model do
+				local poly = model[j]
+				local polyNew = {
+					poly[1],
+					poly[2],
+					poly[3],
+					poly[4],
+					poly[5],
+					poly[6],
+					poly[7],
+					poly[8],
+					poly[9],
+					poly[10],
+					poly[11],
+					poly[12],
+					poly[13],
+					poly[14],
+				}
+				modelNew[j] = polyNew
+			end
+
+			local varNew = {
+				quality = var.quality,
+				size = var.size,
+				collapsedModel = modelNew,
+			}
+
+			newVars[i] = varNew
+		end
+		return newVars
+	end
+
+	---@type LoDVariant[][]
+	local objectVariants = {}
+
+	---[INTERNAL] initialize new PineObject
+	---@param object PineObject
+	function LoDModel:initObject(object)
+		local variants
+		if LoDModel.quickInitWorseRuntime then
+			variants = modelVariants
+		else
+			variants = copyVariants(modelVariants)
+		end
+		objectVariants[object] = variants
+
+		object[7] = variants[1].collapsedModel
+		object[8] = variants[1].size
+		object[9] = LoDModel
+	end
+
+	---Update the LoD for a table of objects with respect to a camera position
+	---@param object PineObject
+	---@param camera CollapsedCamera
+	function LoDModel:update(object, camera)
+		local variants = objectVariants[object]
+
+		if variants then
+			local dx = camera[1] - object[1]
+			local dy = camera[2] - object[2]
+			local dz = camera[3] - object[3]
+			local d = (dx*dx + dy*dy + dz*dz)^0.5
+			local targetQuality = math.min(1, math.max(LoDModel.minQuality, 1 / (d/LoDModel.qualityHalvingDistance)))
+			local closestRaw = (LoDModel.variantCount + 1) - LoDModel.variantCount * (targetQuality - LoDModel.minQuality) / (1 - LoDModel.minQuality)
+			local closest = math.floor(closestRaw + 0.5)
+
+			local var = variants[closest]
+			object[7] = var.collapsedModel
+			object[8] = var.size
+		end
+	end
+
+	return LoDModel
+end
+
+local sqrt = math.sqrt
+---Used internally. Creates a CollapsedModel from a Model and also returns the biggest distance from its origin (for frustum culling)
+---@param model Model
+---@return CollapsedModel
+---@return number biggestDistance largest distance of a vertex in the model from its origin
+function loadModelRaw(model)
+	---@class CollapsedModel
+	local transformedModel = {}
+	local biggestDistance = 0
+
+	for i = 1, #model do
+		local polygon = model[i]
+		transformedModel[#transformedModel+1] = {}
+		transformedModel[#transformedModel][1] = polygon.x1
+		transformedModel[#transformedModel][2] = polygon.y1
+		transformedModel[#transformedModel][3] = polygon.z1
+		transformedModel[#transformedModel][4] = polygon.x2
+		transformedModel[#transformedModel][5] = polygon.y2
+		transformedModel[#transformedModel][6] = polygon.z2
+		transformedModel[#transformedModel][7] = polygon.x3
+		transformedModel[#transformedModel][8] = polygon.y3
+		transformedModel[#transformedModel][9] = polygon.z3
+		transformedModel[#transformedModel][10] = polygon.forceRender
+		transformedModel[#transformedModel][11] = polygon.c
+		transformedModel[#transformedModel][12] = polygon.char
+		transformedModel[#transformedModel][13] = polygon.charc
+		transformedModel[#transformedModel][14] = polygon.outlineColor
+		transformedModel[#transformedModel][15] = i
+
+		local d1 = sqrt(polygon.x1*polygon.x1 + polygon.y1*polygon.y1 + polygon.z1*polygon.z1)
+		local d2 = sqrt(polygon.x2*polygon.x2 + polygon.y2*polygon.y2 + polygon.z2*polygon.z2)
+		local d3 = sqrt(polygon.x3*polygon.x3 + polygon.y3*polygon.y3 + polygon.z3*polygon.z3)
+
+		if d1 > biggestDistance then
+			biggestDistance = d1
+		end
+		if d2 > biggestDistance then
+			biggestDistance = d2
+		end
+		if d3 > biggestDistance then
+			biggestDistance = d3
+		end
+	end
+	return transformedModel, biggestDistance
+end
+
 ---@param path string
-local function loadModel(path)
+function loadModel(path)
 	local modelFile = fs.open(path, "r")
 	if not modelFile then
 		error("Could not find model for an object at path: " .. path)
@@ -1046,6 +1456,8 @@ local function loadModel(path)
 	---@field translate fun(self: Model, dx: number?, dy: number?, dz: number?): Model Translates the model
 	---@field rotate fun(self: Model, rotX: number?, rotY: number?, rotZ: number?): Model Rotates a given Model around three axes (radians)
 	---@field alignBottom fun(self: Model): Model Translates the model such that the bottom aligns with y = 0
+	---@field decimate fun(self: Model, quality: number, mode?: "ratio"|"polys"): Model Triangle decimation (reduce the quality / number of polygons in a model)
+	---@field toLoD fun(self: Model, settings: {minQuality: number?, variantCount: number?, qualityHalvingDistance: number?, quickInitWorseRuntime: boolean?}?): LoDModel Create a new Level of Detail Model
 	local model = textutils.unserialise(content)
 
 	for name, func in pairs(transforms) do
@@ -1162,51 +1574,6 @@ local function newFrame(x1, y1, x2, y2)
 		updateMappingConstants()
 	end
 
-	---Used internally. Creates a CollapsedModel from a Model and also returns the biggest distance from its origin (for frustum culling)
-	---@param model Model
-	---@return CollapsedModel
-	---@return number biggestDistance largest distance of a vertex in the model from its origin
-	function frame:loadModelRaw(model)
-		---@class CollapsedModel
-		local transformedModel = {}
-		local biggestDistance = 0
-
-		for i = 1, #model do
-			local polygon = model[i]
-			transformedModel[#transformedModel+1] = {}
-			transformedModel[#transformedModel][1] = polygon.x1
-			transformedModel[#transformedModel][2] = polygon.y1
-			transformedModel[#transformedModel][3] = polygon.z1
-			transformedModel[#transformedModel][4] = polygon.x2
-			transformedModel[#transformedModel][5] = polygon.y2
-			transformedModel[#transformedModel][6] = polygon.z2
-			transformedModel[#transformedModel][7] = polygon.x3
-			transformedModel[#transformedModel][8] = polygon.y3
-			transformedModel[#transformedModel][9] = polygon.z3
-			transformedModel[#transformedModel][10] = polygon.forceRender
-			transformedModel[#transformedModel][11] = polygon.c
-			transformedModel[#transformedModel][12] = polygon.char
-			transformedModel[#transformedModel][13] = polygon.charc
-			transformedModel[#transformedModel][14] = polygon.outlineColor
-			transformedModel[#transformedModel][15] = i
-
-			local d1 = sqrt(polygon.x1*polygon.x1 + polygon.y1*polygon.y1 + polygon.z1*polygon.z1)
-			local d2 = sqrt(polygon.x2*polygon.x2 + polygon.y2*polygon.y2 + polygon.z2*polygon.z2)
-			local d3 = sqrt(polygon.x3*polygon.x3 + polygon.y3*polygon.y3 + polygon.z3*polygon.z3)
-
-			if d1 > biggestDistance then
-				biggestDistance = d1
-			end
-			if d2 > biggestDistance then
-				biggestDistance = d2
-			end
-			if d3 > biggestDistance then
-				biggestDistance = d3
-			end
-		end
-		return transformedModel, biggestDistance
-	end
-
 	function frame:map3dTo2d(x, y, z)
 		local camera = self.camera
 		local cA1 = sin(camera[4] or 0)
@@ -1259,6 +1626,11 @@ local function newFrame(x1, y1, x2, y2)
 		local xCameraOffset = oX and (oX - camera[1]) or 0
 		local yCameraOffset = oY and (oY - camera[2]) or 0
 		local zCameraOffset = oZ and (oZ - camera[3]) or 0
+
+		local LoDModel = object[9]
+		if LoDModel then
+			LoDModel:update(object, camera)
+		end
 
 		local model = object[7]
 		if #model <= 0 then
@@ -1896,7 +2268,7 @@ local function newFrame(x1, y1, x2, y2)
 	end
 
 	---Creates a new PineObject
-	---@param model string|Model either a string (path to the model file) or Model
+	---@param model string|Model|LoDModel either a string (path to the model file) or Model or LoDModel
 	---@param x number?
 	---@param y number?
 	---@param z number?
@@ -1909,12 +2281,18 @@ local function newFrame(x1, y1, x2, y2)
 		local modelSize = nil
 
 		if type(model) == "table" then
-			---@cast model Model
-			objModel, modelSize = self:loadModelRaw(model)
+			if model.initObject then
+				-- @cast model LoDModel
+				-- objModel, modelSize = loadModelRaw(model)
+				-- model:initObject(object)
+			else
+				---@cast model Model
+				objModel, modelSize = loadModelRaw(model)
+			end
 		else
 			---@cast model string
 			local modelRaw = loadModel(model)
-			objModel, modelSize = self:loadModelRaw(modelRaw)
+			objModel, modelSize = loadModelRaw(modelRaw)
 		end
 
 		---@class PineObject
@@ -1950,15 +2328,22 @@ local function newFrame(x1, y1, x2, y2)
 		function object:setModel(ref)
 			if type(ref) == "table" then
 				---@cast ref Model
-				objModel, modelSize = self.frame:loadModelRaw(ref)
+				objModel, modelSize = loadModelRaw(ref)
 				self[7] = objModel
 				self[8] = modelSize
 			else
 				---@cast ref string
 				local modelRaw = loadModel(ref)
-				objModel, modelSize = self.frame:loadModelRaw(modelRaw)
+				objModel, modelSize = loadModelRaw(modelRaw)
 				self[7] = objModel
 				self[8] = modelSize
+			end
+		end
+
+		if type(model) == "table" then
+			if model.initObject then
+				---@cast model LoDModel
+				model:initObject(object)
 			end
 		end
 
@@ -2270,7 +2655,8 @@ return {
 	newFrame = newFrame,
 	loadModel = loadModel,
 	newBuffer = newBuffer,
+	-- newLoDManager = newLoDManager,
 	linear = linear,
 	models = models,
-	transforms = transforms,
+	-- transforms = transforms,
 }
