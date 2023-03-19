@@ -72,17 +72,23 @@ local function newBuffer(x1, y1, x2, y2)
 		local screenBuffer = self.screenBuffer
 
 		screenBuffer.c2 = {}
+		screenBuffer.depth = {}
 		local c2 = screenBuffer.c2
+		local depth = screenBuffer.depth
 
+		local big = math.huge
 		local width = self.width
 		local color = self.backgroundColor
 
 		if self.blittleOn then
 			for y = 1, self.height do
 				c2[y] = {}
+				depth[y] = {}
 				local c2Y = c2[y]
+				local depthY = depth[y]
 				for x = 1, width do
 					c2Y[x] = color
+					depthY[x] = big
 				end
 			end
 		else
@@ -98,13 +104,16 @@ local function newBuffer(x1, y1, x2, y2)
 				c1[y] = {}
 				c2[y] = {}
 				chars[y] = {}
+				depth[y] = {}
 				local c1Y = c1[y]
 				local c2Y = c2[y]
 				local charsY = chars[y]
+				local depthY = depth[y]
 				for x = 1, width do
 					c1Y[x] = colorC
 					c2Y[x] = colorC
 					charsY[x] = " "
+					depthY[x] = big
 				end
 			end
 		end
@@ -118,18 +127,22 @@ local function newBuffer(x1, y1, x2, y2)
 		local chars = screenBuffer.chars
 		local c1 = screenBuffer.c1
 		local c2 = screenBuffer.c2
+		local depth = self.screenBuffer.depth
 
 		local c = colorChar[c]
 
+		local big = math.huge
 		local width = self.width
 		for y = 1, self.height do
 			local charsY = chars[y]
 			local c1Y = c1[y]
 			local c2Y = c2[y]
+			local depthY = depth[y]
 			for x = 1, width do
 				charsY[x] = " "
 				c1Y[x] = c
 				c2Y[x] = c
+				depthY[x] = big
 			end
 		end
 	end
@@ -138,12 +151,16 @@ local function newBuffer(x1, y1, x2, y2)
 	function buffer:fastClearBLittle()
 		local c = self.backgroundColor
 		local c2 = self.screenBuffer.c2
+		local depth = self.screenBuffer.depth
 
+		local big = math.huge
 		local width = self.width
 		for y = 1, self.height do
 			local c2Y = c2[y]
+			local depthY = depth[y]
 			for x = 1, width do
 				c2Y[x] = c
+				depthY[x] = big
 			end
 		end
 	end
@@ -192,11 +209,12 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
-	function buffer:loadLineNormal(x1, y1, x2, y2, c, char, charc, a, b)
+	function buffer:loadLineNormal(x1, y1, x2, y2, c, char, charc, a, b, depth)
 		local screenBuffer = self.screenBuffer
 		local c1 = screenBuffer.c1
 		local c2 = screenBuffer.c2
 		local chars = screenBuffer.chars
+		local depthBuffer = screenBuffer.depth
 
 		local frameWidth = self.width
 		local frameHeight = self.height
@@ -204,19 +222,21 @@ local function newBuffer(x1, y1, x2, y2)
 		if x2 >= x1 then
 			for x = max(ceil(x1), 1), min(floor(x2), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight then
+				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
 					c1[y][x] = charc
 					c2[y][x] = c
 					chars[y][x] = char
+					depthBuffer[y][x] = depth
 				end
 			end
 		else
 			for x = max(ceil(x2), 1), min(floor(x1), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight then
+				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
 					c1[y][x] = charc
 					c2[y][x] = c
 					chars[y][x] = char
+					depthBuffer[y][x] = depth
 				end
 			end
 		end
@@ -224,27 +244,32 @@ local function newBuffer(x1, y1, x2, y2)
 		if y2 >= y1 then
 			for y = max(ceil(y1), 1), min(floor(y2), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-				if x > 0 and x <= frameWidth then
+				local depthBufferY = depthBuffer[y]
+				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
 					c1[y][x] = charc
 					c2[y][x] = c
 					chars[y][x] = char
+					depthBufferY[x] = depth
 				end
 			end
 		else
 			for y = max(ceil(y2), 1), min(floor(y1), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-				if x > 0 and x <= frameWidth then
+				local depthBufferY = depthBuffer[y]
+				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
 					c1[y][x] = charc
 					c2[y][x] = c
 					chars[y][x] = char
+					depthBufferY[x] = depth
 				end
 			end
 		end
 	end
 
-	function buffer:loadLineBLittle(x1, y1, x2, y2, c, a, b)
+	function buffer:loadLineBLittle(x1, y1, x2, y2, c, a, b, depth)
 		local screenBuffer = self.screenBuffer
 		local c2 = screenBuffer.c2
+		local depthBuffer = screenBuffer.depth
 
 		local frameWidth = self.width
 		local frameHeight = self.height
@@ -252,15 +277,17 @@ local function newBuffer(x1, y1, x2, y2)
 		if x2 >= x1 then
 			for x = max(ceil(x1), 1), min(floor(x2), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight then
+				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
 					c2[y][x] = c
+					depthBuffer[y][x] = depth
 				end
 			end
 		else
 			for x = max(ceil(x2), 1), min(floor(x1), frameWidth) do
 				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight then
+				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
 					c2[y][x] = c
+					depthBuffer[y][x] = depth
 				end
 			end
 		end
@@ -268,15 +295,19 @@ local function newBuffer(x1, y1, x2, y2)
 		if y2 >= y1 then
 			for y = max(ceil(y1), 1), min(floor(y2), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-				if x > 0 and x <= frameWidth then
+				local depthBufferY = depthBuffer[y]
+				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
 					c2[y][x] = c
+					depthBufferY[x] = depth
 				end
 			end
 		else
 			for y = max(ceil(y2), 1), min(floor(y1), frameHeight) do
 				local x = floor((y - b) / a + 0.5)
-				if x > 0 and x <= frameWidth then
+				local depthBufferY = depthBuffer[y]
+				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
 					c2[y][x] = c
+					depthBufferY[x] = depth
 				end
 			end
 		end
@@ -284,7 +315,7 @@ local function newBuffer(x1, y1, x2, y2)
 
 	local defaultOutlineColor = colors.black
 
-	function buffer:drawTriangleNormal(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor)
+	function buffer:drawTriangleNormal(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor, depth)
 		if x1 < 1 and x2 < 1 and x3 < 1 or y1 < 1 and y2 < 1 and y3 < 1 then return end
 		local frameWidth = self.width
 		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then return end
@@ -316,6 +347,7 @@ local function newBuffer(x1, y1, x2, y2)
 		local c1 = screenBuffer.c1
 		local c2 = screenBuffer.c2
 		local chars = screenBuffer.chars
+		local depthBuffer = screenBuffer.depth
 
 		local x2_x1_div_y2_y1 = (x2 - x1) / (y2 - y1)
 		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
@@ -325,48 +357,60 @@ local function newBuffer(x1, y1, x2, y2)
 		local c = colorChar[c]
 		local charc = colorChar[charc]
 
-		for y = minY, midY do
-			local c1Y = c1[y]
-			local c2Y = c2[y]
-			local charsY = chars[y]
+		if y1 ~= y2 and y1 ~= y3 then
+			for y = minY, midY do
+				local c1Y = c1[y]
+				local c2Y = c2[y]
+				local charsY = chars[y]
+				local depthY = depthBuffer[y]
 
-			local xA = (y - y1) * x2_x1_div_y2_y1 + x1
-			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-			if xB < xA then xA, xB = xB, xA end
+				local xA = (y - y1) * x2_x1_div_y2_y1 + x1
+				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+				if xB < xA then xA, xB = xB, xA end
 
-			if xA < 1 then xA = 1 end
-			if xA > frameWidth then xA = frameWidth end
-			if xB < 1 then xB = 1 end
-			if xB > frameWidth then xB = frameWidth end
+				if xA < 1 then xA = 1 end
+				if xA > frameWidth then xA = frameWidth + 1 end
+				if xB < 1 then xB = 0 end
+				if xB > frameWidth then xB = frameWidth end
 
-			for x = floor(xA+0.5), floor(xB+0.5) do
-				c1Y[x] = charc
-				c2Y[x] = c
-				charsY[x] = char
+				for x = floor(xA+0.5), floor(xB+0.5) do
+					if depth < depthY[x] then
+						depthY[x] = depth
+						c1Y[x] = charc
+						c2Y[x] = c
+						charsY[x] = char
+					end
+				end
 			end
 		end
 
 		local x3_x2_div_y3_y2 = (x3 - x2) / (y3 - y2)
 		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
 
-		for y = midY+1, maxY do
-			local c1Y = c1[y]
-			local c2Y = c2[y]
-			local charsY = chars[y]
+		if y3 ~= y2 and y1 ~= y3 then
+			for y = midY+1, maxY do
+				local c1Y = c1[y]
+				local c2Y = c2[y]
+				local charsY = chars[y]
+				local depthY = depthBuffer[y]
 
-			local xA = (y - y2) * x3_x2_div_y3_y2 + x2
-			local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-			if xB < xA then xA, xB = xB, xA end
+				local xA = (y - y2) * x3_x2_div_y3_y2 + x2
+				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
+				if xB < xA then xA, xB = xB, xA end
 
-			if xA < 1 then xA = 1 end
-			if xA > frameWidth then xA = frameWidth end
-			if xB < 1 then xB = 1 end
-			if xB > frameWidth then xB = frameWidth end
+				if xA < 1 then xA = 1 end
+				if xA > frameWidth then xA = frameWidth + 1 end
+				if xB < 1 then xB = 0 end
+				if xB > frameWidth then xB = frameWidth end
 
-			for x = floor(xA+0.5), floor(xB+0.5) do
-				c1Y[x] = charc
-				c2Y[x] = c
-				charsY[x] = char
+				for x = floor(xA+0.5), floor(xB+0.5) do
+					if depth < depthY[x] then
+						depthY[x] = depth
+						c1Y[x] = charc
+						c2Y[x] = c
+						charsY[x] = char
+					end
+				end
 			end
 		end
 
@@ -378,13 +422,13 @@ local function newBuffer(x1, y1, x2, y2)
 
 			local loadLine = self.loadLineNormal
 			local c = colorChar[outlineColor or defaultOutlineColor]
-			loadLine(self, x1, y1, x2, y2, c, char, charc, a1, b1)
-			loadLine(self, x2, y2, x3, y3, c, char, charc, a2, b2)
-			loadLine(self, x3, y3, x1, y1, c, char, charc, a3, b3)
+			loadLine(self, x1, y1, x2, y2, c, char, charc, a1, b1, depth)
+			loadLine(self, x2, y2, x3, y3, c, char, charc, a2, b2, depth)
+			loadLine(self, x3, y3, x1, y1, c, char, charc, a3, b3, depth)
 		end
 	end
 
-	function buffer:drawTriangleBLittle(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor)
+	function buffer:drawTriangleBLittle(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor, depth)
 		if x1 < 1 and x2 < 1 and x3 < 1 or y1 < 1 and y2 < 1 and y3 < 1 then return end
 		local frameWidth = self.width
 		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then return end
@@ -414,6 +458,7 @@ local function newBuffer(x1, y1, x2, y2)
 		local maxY = min(max(1, floor(y3)), frameHeight)
 
 		local c2 = screenBuffer.c2
+		local depthBuffer = screenBuffer.depth
 
 		local x2_x1_div_y2_y1 = (x2 - x1) / (y2 - y1)
 		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
@@ -421,18 +466,22 @@ local function newBuffer(x1, y1, x2, y2)
 		if y1 ~= y2 and y1 ~= y3 then
 			for y = minY, midY do
 				local c2Y = c2[y]
+				local depthY = depthBuffer[y]
 
 				local xA = (y - y1) * x2_x1_div_y2_y1 + x1
 				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
 				if xB < xA then xA, xB = xB, xA end
 
-				if xA < 1 then xA = 0 end
+				if xA < 1 then xA = 1 end
 				if xA > frameWidth then xA = frameWidth + 1 end
 				if xB < 1 then xB = 0 end
-				if xB > frameWidth then xB = frameWidth + 1 end
+				if xB > frameWidth then xB = frameWidth end
 
 				for x = floor(xA+0.5), floor(xB+0.5) do
-					c2Y[x] = c
+					if depth < depthY[x] then
+						depthY[x] = depth
+						c2Y[x] = c
+					end
 				end
 			end
 		end
@@ -443,18 +492,22 @@ local function newBuffer(x1, y1, x2, y2)
 		if y3 ~= y2 and y1 ~= y3 then
 			for y = midY+1, maxY do
 				local c2Y = c2[y]
+				local depthY = depthBuffer[y]
 
 				local xA = (y - y2) * x3_x2_div_y3_y2 + x2
 				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
 				if xB < xA then xA, xB = xB, xA end
 
-				if xA < 1 then xA = 0 end
+				if xA < 1 then xA = 1 end
 				if xA > frameWidth then xA = frameWidth + 1 end
 				if xB < 1 then xB = 0 end
-				if xB > frameWidth then xB = frameWidth + 1 end
+				if xB > frameWidth then xB = frameWidth end
 
 				for x = floor(xA+0.5), floor(xB+0.5) do
-					c2Y[x] = c
+					if depth < depthY[x] then
+						depthY[x] = depth
+						c2Y[x] = c
+					end
 				end
 			end
 		end
@@ -467,9 +520,9 @@ local function newBuffer(x1, y1, x2, y2)
 
 			local loadLine = self.loadLineBLittle
 			local c = outlineColor or defaultOutlineColor
-			loadLine(self, x1, y1, x2, y2, c, a1, b1)
-			loadLine(self, x2, y2, x3, y3, c, a2, b2)
-			loadLine(self, x3, y3, x1, y1, c, a3, b3)
+			loadLine(self, x1, y1, x2, y2, c, a1, b1, depth)
+			loadLine(self, x2, y2, x3, y3, c, a2, b2, depth)
+			loadLine(self, x3, y3, x1, y1, c, a3, b3, depth)
 		end
 	end
 
@@ -527,51 +580,13 @@ local function newBuffer(x1, y1, x2, y2)
 	return buffer
 end
 
-local sort = table.sort
-local function swapPoly16(a, b, table)
-	if table[a] == nil or table[b] == nil then
-		return false
-	end
-	if table[a][16] < table[b][16] then
-		table[a], table[b] = table[b], table[a]
-		return true
-	end
-	return false
-end
-
-local function bubblesort16(array)
-	for i = 1, #array do
-		local ci = i
-		while swapPoly16(ci, ci+1, array) do
-			ci = ci - 1
-		end
-	end
-end
-
-local function getCorrect16(array)
-	local n = #array
-	local correct = 0
-	local prevVal = array[1][16]
-	for i = 2, n do
-		local val = array[i][16]
-		if val <= prevVal then
-			correct = correct + 1
-		end
-		prevVal = val
-	end
-	local correctRatio = correct / (n-1)
-	return correctRatio
-end
-
-local a=8;local function b(c)local d=0;while c>=a do d=bit.bor(d,bit.band(c,1))c=bit.brshift(c,1)end;return c+d end;local function e(f,g,h)for i=g+1,h do local j=f[i]local k=j[16]local l=i-1;while l>=g and f[l][16]>k do f[l+1]=f[l]l=l-1 end;f[l+1]=j end end;local function m(f,g,h,n,o,d)local p=o-n+1;local q=d-o;for r=0,p-1 do g[r]=f[n+r]end;for r=0,q-1 do h[r]=f[o+1+r]end;local i=0;local l=0;local s=n;while i<p and l<q do if g[i][16]<=h[l][16]then f[s]=g[i]i=i+1 else f[s]=h[l]l=l+1 end;s=s+1 end;while i<p do f[s]=g[i]s=s+1;i=i+1 end;while l<q do f[s]=h[l]s=s+1;l=l+1 end end;local function timsort16(f)local c=#f;local t=b(a)local u=math.min;for i=1,c,t do e(f,i,u(i+a-1,c))end;local v,w={},{}local x=t;while x<=c do for g=1,c,2*x do local y=g+x-1;local h=u(y+x,c)if y<h then m(f,v,w,g,y,h)end end;x=2*x end;for i=1,math.floor(c/2)do f[i],f[c-i+1]=f[c-i+1],f[i]end end
-
----Sorts the polygons from back to front relative to the Camera
+---Computes distance to comera for each polygon
 ---@param polygons Polygon[]
 ---@param objectX number
 ---@param objectY number
 ---@param objectZ number
 ---@param camera CollapsedCamera
-local function sortPolygons(polygons, objectX, objectY, objectZ, camera)
+local function computePolyCamDistance(polygons, objectX, objectY, objectZ, camera)
 	local camX = camera[1]
 	local camY = camera[2]
 	local camZ = camera[3]
@@ -587,15 +602,6 @@ local function sortPolygons(polygons, objectX, objectY, objectZ, camera)
 		local avgZ = rz + (polygon[3] + polygon[6] + polygon[9]) / 3
 
 		polygon[16] = avgX*avgX + avgY*avgY + avgZ*avgZ -- relative distance
-	end
-
-	local correctRatio = getCorrect16(polygons)
-
-	if correctRatio == 1 then
-	elseif correctRatio > 0.7 then
-		bubblesort16(polygons)
-	else
-		timsort16(polygons)
 	end
 end
 
@@ -676,69 +682,6 @@ local function rotateCollapsedModel(model, rotX, rotY, rotZ)
 	return rotatedModel
 end
 
-local function swap10(a, b, table)
-	if table[a] == nil or table[b] == nil then
-		return false
-	end
-	if table[a][10] < table[b][10] then
-		table[a], table[b] = table[b], table[a]
-		return true
-	end
-	return false
-end
-
-local function bubblesort10(array)
-	for i = 1, #array do
-		local ci = i
-		while swap10(ci, ci+1, array) do
-			ci = ci - 1
-		end
-	end
-end
-
-local function getCorrect10(array)
-	local n = #array
-	local correct = 0
-	local prevVal = array[1][10]
-	for i = 2, n do
-		local val = array[i][10]
-		if val <= prevVal then
-			correct = correct + 1
-		end
-		prevVal = val
-	end
-	local correctRatio = correct / (n-1)
-	return correctRatio
-end
-
-local function sortObjects(objects, camera)
-	local cX = camera[1]
-	local cY = camera[2]
-	local cZ = camera[3]
-
-	for i = 1, #objects do
-		local object = objects[i]
-
-		local oX = object[1]
-		local oY = object[2]
-		local oZ = object[3]
-		local dX = oX and (oX - cX) or 0
-		local dY = oY and (oY - cY) or 0
-		local dZ = oZ and (oZ - cZ) or 0
-
-		object[10] = dX*dX + dY*dY + dZ*dZ -- relative distance
-	end
-
-	local correctRatio = getCorrect10(objects)
-
-	if correctRatio == 1 then
-	elseif correctRatio > 0.7 then
-		bubblesort10(objects)
-	else
-		sort(objects, function(a, b) return a[10] > b[10] end)
-	end
-end
-
 local transforms = {}
 ---Model Inverts the direction of all triangles
 ---@param model Model
@@ -747,30 +690,6 @@ function transforms.invertTriangles(model)
 	if not model or type(model) ~= "table" then
 		error("transforms.invertTriangles expected arg#1 to be a table (model)")
 	end
-
-	-- ---@class Model
-	-- local newModel = {}
-	-- for i = 1, #model do
-	-- 	local triangle = model[i]
-	-- 	local newTriangle = {
-	-- 		x1 = triangle.x1,
-	-- 		y1 = triangle.y1,
-	-- 		z1 = triangle.z1,
-	-- 		x2 = triangle.x3,
-	-- 		y2 = triangle.y3,
-	-- 		z2 = triangle.z3,
-	-- 		x3 = triangle.x2,
-	-- 		y3 = triangle.y2,
-	-- 		z3 = triangle.z2,
-	-- 		c = triangle.c,
-	-- 		char = triangle.char,
-	-- 		charc = triangle.charc,
-	-- 		forceRender = triangle.forceRender,
-	-- 		outlineColor = triangle.outlineColor,
-	-- 	}
-	-- 	newModel[i] = newTriangle
-	-- end
-	-- return newModel
 
 	for i = 1, #model do
 		local triangle = model[i]
@@ -1214,20 +1133,7 @@ function transforms.decimate(model, quality, mode)
 	end
 
 	-- build new model
-
-	---@class Model
-	---@field invertTriangles fun(self: Model): Model Inverts the direction of all triangles
-	---@field setOutline fun(self: Model, col: number|table): Model Change the outline colors of polygons in a Model. If number, will set the outline color for each Polygon, if table, uses it as a mapping from Polygon color to new outline color
-	---@field mapColor fun(self: Model, col: number|table): Model Change the colors of polygons in a Model. If number, will set the color for each Polygon, if table, uses it as a mapping from Polygon color to new the new color
-	---@field center fun(self: Model): Model Center the Model such that the origin is in the middle of the bounding box
-	---@field normalizeScale fun(self: Model): Model Rescales the model such that the largest value of any coordinate is equal to 1
-	---@field normalizeScaleY fun(self: Model): Model Similar to normalizeScale, rescales the model, but only uses the y coordinate to determine how much it is scaled (normalizes height)
-	---@field scale fun(self: Model, scale: number): Model Scales the model
-	---@field translate fun(self: Model, dx: number?, dy: number?, dz: number?): Model Translates the model
-	---@field rotate fun(self: Model, rotX: number?, rotY: number?, rotZ: number?): Model Rotates a given Model around three axes (radians)
-	---@field alignBottom fun(self: Model): Model Translates the model such that the bottom aligns with y = 0
-	---@field decimate fun(self: Model, quality: number, mode?: "ratio"|"polys"): Model Triangle decimation (reduce the quality / number of polygons in a model)
-	---@field toLoD fun(self: Model, settings: {minQuality: number?, variantCount: number?, qualityHalvingDistance: number?, quickInitWorseRuntime: boolean?}?): LoDModel Create a new Level of Detail Model
+	---@type Model
 	local newModel = {}
 
 	for i = 1, #triangles do
@@ -1671,7 +1577,7 @@ local function newFrame(x1, y1, x2, y2)
 		if (rotX and rotX ~= 0) or (rotY and rotY ~= 0) or (rotZ and rotZ ~= 0) then
 			model = rotateCollapsedModel(model, rotX, rotY, rotZ)
 		end
-		sortPolygons(model, oX, oY, oZ, camera)
+		computePolyCamDistance(model, oX, oY, oZ, camera)
 
 		local clippingEnabled = xCameraOffset*xCameraOffset + yCameraOffset*yCameraOffset + zCameraOffset*zCameraOffset < modelSize*modelSize*4
 
@@ -1728,10 +1634,11 @@ local function newFrame(x1, y1, x2, y2)
 			end
 		end
 
-		local sortedPolygons = model
+		local depthPolygons = model
 		local buff = self.buffer
-		for i = 1, #sortedPolygons do
-			local polygon = sortedPolygons[i]
+		for i = 1, #depthPolygons do
+			local polygon = depthPolygons[i]
+			local depth = polygon[16]
 
 			local x1, y1, dX1 = map3dTo2d(polygon[1] + xCameraOffset, polygon[2] + yCameraOffset, polygon[3] + zCameraOffset)
 			if dX1 > 0.00010000001 then
@@ -1740,7 +1647,7 @@ local function newFrame(x1, y1, x2, y2)
 					local x3, y3, dX3 = map3dTo2d(polygon[7] + xCameraOffset, polygon[8] + yCameraOffset, polygon[9] + zCameraOffset)
 					if dX3 > 0.00010000001 then
 						if polygon[10] or (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2) < 0 then
-							buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 						end
 					elseif clippingEnabled then
 						local function map3dTo2dFull(x, y, z)
@@ -1787,7 +1694,7 @@ local function newFrame(x1, y1, x2, y2)
 						local AY = (newPosAY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (x2 - x1) * (AY - y2) - (y2 - y1) * (AX - x2) < 0 then
-							buff:drawTriangle(x1, y1, x2, y2, AX, AY, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(x1, y1, x2, y2, AX, AY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 
 							local w2 = abs(dX2 - 0.0001)
 							local wT = w2 + w3
@@ -1796,7 +1703,7 @@ local function newFrame(x1, y1, x2, y2)
 
 							local BX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 							local BY = (newPosAY * 10000) * sYFactor + renderOffsetY
-							buff:drawTriangle(BX, BY, x2, y2, AX, AY, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(BX, BY, x2, y2, AX, AY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 						end
 					end
 				elseif clippingEnabled then
@@ -1845,7 +1752,7 @@ local function newFrame(x1, y1, x2, y2)
 						local AY = (newPosAY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (AX - x1) * (y3 - AY) - (AY - y1) * (x3 - AX) < 0 then
-							buff:drawTriangle(x1, y1, AX, AY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(x1, y1, AX, AY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 
 							local w3 = abs(dX3 - 0.0001)
 							local wT = w2 + w3
@@ -1854,7 +1761,7 @@ local function newFrame(x1, y1, x2, y2)
 
 							local BX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 							local BY = (newPosAY * 10000) * sYFactor + renderOffsetY
-							buff:drawTriangle(BX, BY, AX, AY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(BX, BY, AX, AY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 						end
 					else
 						-- 1 0 0
@@ -1877,7 +1784,7 @@ local function newFrame(x1, y1, x2, y2)
 						local BY = (newPosBY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (AX - x1) * (BY - AY) - (AY - y1) * (BX - AX) < 0 then
-							buff:drawTriangle(x1, y1, AX, AY, BX, BY, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(x1, y1, AX, AY, BX, BY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 						end
 					end
 				end
@@ -1927,7 +1834,7 @@ local function newFrame(x1, y1, x2, y2)
 						local AX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 						local AY = (newPosAY * 10000) * sYFactor + renderOffsetY
 						if polygon[10] or (x2 - AX) * (y3 - y2) - (y2 - AY) * (x3 - x2) < 0 then
-							buff:drawTriangle(AX, AY, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(AX, AY, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 
 							local w3 = abs(dX3 - 0.0001)
 							local wT = w1 + w3
@@ -1936,7 +1843,7 @@ local function newFrame(x1, y1, x2, y2)
 
 							local BX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 							local BY = (newPosAY * 10000) * sYFactor + renderOffsetY
-							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 						end
 					else
 						-- 0 1 0
@@ -1959,7 +1866,7 @@ local function newFrame(x1, y1, x2, y2)
 						local BY = (newPosBY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (x2 - AX) * (BY - y2) - (y2 - AY) * (BX - x2) < 0 then
-							buff:drawTriangle(AX, AY, x2, y2, BX, BY, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(AX, AY, x2, y2, BX, BY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 						end
 					end
 				else
@@ -1984,7 +1891,7 @@ local function newFrame(x1, y1, x2, y2)
 						local BY = (newPosBY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (BX - AX) * (y3 - BY) - (BY - AY) * (x3 - BX) < 0 then
-							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14])
+							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
 						end
 					--else
 						-- 0 0 0
@@ -2006,7 +1913,6 @@ local function newFrame(x1, y1, x2, y2)
 			sin(camera[6]), cos(camera[6]),
 		}
 
-		sortObjects(objects, camera)
 		local objects = objects
 		for i = 1, #objects do
 			self:drawObject(objects[i], camera, cameraAngles)
@@ -2082,22 +1988,27 @@ local function newFrame(x1, y1, x2, y2)
 	---@return number|nil objectIndex index of a PineObject that was found at the given coordinates in the given table
 	---@return number|nil polyIndex index of the Polygon in the Model of the PineObject if one was found
 	function frame:getObjectIndexTrace(objects, x, y)
-		local function sign(p1, p2, p3)
-			return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y)
+		local function sign(x1, y1, x2, y2, x3, y3)
+			return (x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3)
 		end
 
 		local function isInTriangle(checkX, checkY, x1, y1, x2, y2, x3, y3, framex1, framey1, framex2, framey2)
-			local b1 = sign({x = checkX, y = checkY}, {x = x1, y = y1}, {x = x2, y = y2}) < 0
-			local b2 = sign({x = checkX, y = checkY}, {x = x2, y = y2}, {x = x3, y = y3}) < 0
-			local b3 = sign({x = checkX, y = checkY}, {x = x3, y = y3}, {x = x1, y = y1}) < 0
+			local b1 = sign(checkX, checkY, x1, y1, x2, y2) < 0
+			local b2 = sign(checkX, checkY, x2, y2, x3, y3) < 0
+			local b3 = sign(checkX, checkY, x3, y3, x1, y1) < 0
 
 			return b1 == b2 and b2 == b3
 		end
 
 		local y = y - 1
 
-		local solutions = {}
-		if self.blittleOn then
+		local selfBlittleOn = self.blittleOn
+		local selfX1 = self.x1
+		local selfY1 = self.y1
+		local selfX2 = self.x2
+		local selfY2 = self.y2
+
+		if selfBlittleOn then
 			x = x * 2
 			y = y * 3 + 1
 		end
@@ -2117,6 +2028,7 @@ local function newFrame(x1, y1, x2, y2)
 		local cA5 = cameraAngles[5]
 		local cA6 = cameraAngles[6]
 
+		local solutions = {}
 		for i = 1, #objects do
 			local object = objects[i]
 
@@ -2185,13 +2097,19 @@ local function newFrame(x1, y1, x2, y2)
 						local x3, y3, onScreen3 = map3dTo2d(polygon[7], polygon[8], polygon[9])
 						if onScreen3 then
 							if polygon[10] or (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2) < 0 then
-								if not self.blittleOn then
-									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, self.x1, self.y1, self.x2, self.y2) then
-										solutions[#solutions+1] = {objectIndex = i, polygonIndex = polygon[15]}
+								local avgX = xCameraOffset + (polygon[1] + polygon[4] + polygon[7]) / 3
+								local avgY = yCameraOffset + (polygon[2] + polygon[5] + polygon[8]) / 3
+								local avgZ = zCameraOffset + (polygon[3] + polygon[6] + polygon[9]) / 3
+
+								local depth = avgX*avgX + avgY*avgY + avgZ*avgZ -- relative distance
+
+								if not selfBlittleOn then
+									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, selfX1, selfY1, selfX2, selfY2) then
+										solutions[#solutions+1] = {objectIndex = i, polygonIndex = polygon[15], depth = depth}
 									end
 								else
-									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, (self.x2 - 1) * 2 + 1, (self.y1 - 1) * 3 + 1, (self.x2) * 2, (self.y2 + 1) * 3) then
-										solutions[#solutions+1] = {objectIndex = i, polygonIndex = polygon[15]}
+									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, (selfX2 - 1) * 2 + 1, (selfY1 - 1) * 3 + 1, (selfX2) * 2, (selfY2 + 1) * 3) then
+										solutions[#solutions+1] = {objectIndex = i, polygonIndex = polygon[15], depth = depth}
 									end
 								end
 							end
@@ -2207,64 +2125,18 @@ local function newFrame(x1, y1, x2, y2)
 			return solutions[1].objectIndex, solutions[1].polygonIndex
 		end
 
-		local objectSolution = {}
-
-		local closestObject = -1
-		local closestObjectDistance = math.huge
+		local closestSolution = -1
+		local closestSolutionDepth = math.huge
 		for i = 1, #solutions do
-			local object = objects[solutions[i].objectIndex]
-
-			local dX = camera[1] - object[1]
-			local dY = camera[2] - object[2]
-			local dZ = camera[3] - object[3]
-			local distance = sqrt(dX*dX + dY*dY + dZ*dZ)
-
-			if distance < closestObjectDistance then
-				closestObjectDistance = distance
-				closestObject = solutions[i].objectIndex
-			end
-		end
-		for i = 1, #solutions do
-			local object = objects[solutions[i].objectIndex]
-
-			local dX = camera[1] - object[1]
-			local dY = camera[2] - object[2]
-			local dZ = camera[3] - object[3]
-			local distance = sqrt(dX*dX + dY*dY + dZ*dZ)
-
-			if distance == closestObjectDistance then
-				objectSolution[#objectSolution+1] = solutions[i].polygonIndex
+			local solution = solutions[i]
+			if solution.depth < closestSolutionDepth then
+				closestSolutionDepth = solution.depth
+				closestSolution = i
 			end
 		end
 
-		local object = objects[closestObject]
-
-		local model = object[7]
-
-		local closestPolygon = -1
-		local closestPolygonDistance = math.huge
-
-		local rx = object[1] - camera[1]
-		local ry = object[2] - camera[2]
-		local rz = object[3] - camera[3]
-
-		for i = 1, #objectSolution do
-			local polygonI = objectSolution[i]
-			local polygon = model[polygonI]
-
-			local avgX = rx + (polygon[1] + polygon[4] + polygon[7]) / 3
-			local avgY = ry + (polygon[2] + polygon[5] + polygon[8]) / 3
-			local avgZ = rz + (polygon[3] + polygon[6] + polygon[9]) / 3
-
-			local distance = sqrt(avgX*avgX + avgY*avgY + avgZ*avgZ)
-
-			if distance < closestPolygonDistance then
-				closestPolygonDistance = distance
-				closestPolygon = objectSolution[i]
-			end
-		end
-
-		return closestObject, closestPolygon
+		local solution = solutions[closestSolution]
+		return solution.objectIndex, solution.polygonIndex
 	end
 
 	---Creates a new PineObject
@@ -2384,6 +2256,11 @@ function models:cube(options)
 		newPoly(-.5,-.5,.5, .5,-.5,.5, -.5,.5,.5, options.side or options.color),
 		newPoly(.5,-.5,.5, .5,.5,.5, -.5,.5,.5, options.side2 or options.side or options.color),
 	}
+
+	for name, func in pairs(transforms) do
+		cube[name] = func
+	end
+
 	return cube
 end
 
@@ -2450,6 +2327,10 @@ function models:sphere(options)
 				end
 			end
 		end
+	end
+
+	for name, func in pairs(transforms) do
+		model[name] = func
 	end
 
 	return model
@@ -2571,6 +2452,10 @@ function models:icosphere(options)
 		end
 	end
 
+	for name, func in pairs(transforms) do
+		model[name] = func
+	end
+
 	return model
 end
 ---@param options {size: number?, color: number?, y: number?}
@@ -2583,6 +2468,11 @@ function models:plane(options)
 		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, -1 * options.size, -1 * options.size, options.y, -1 * options.size, options.color),
 		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, -1 * options.size, options.color),
 	}
+
+	for name, func in pairs(transforms) do
+		plane[name] = func
+	end
+
 	return plane
 end
 ---@param options {res: number?, randomOffset: number?, height: number?, randomHeight: number?, y: number?, scale: number?, color: number?, snowColor: number?, snow: number?, snowHeight: number?}
@@ -2652,6 +2542,11 @@ function models:mountains(options)
 			end
 		end
 	end
+
+	for name, func in pairs(transforms) do
+		model[name] = func
+	end
+
 	return model
 end
 
