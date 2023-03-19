@@ -2454,7 +2454,7 @@ function models:sphere(options)
 
 	return model
 end
----@param options {res: number?, color: number?, color2: number?, colors: number?, top: number?, bottom: number?, colorsFractal: boolean?}
+---@param options {res: number?, color: number?, color2: number?, colors: number[]?, top: number?, bottom: number?, colorsFractal: boolean?}
 function models:icosphere(options)
 	options.res = options.res or 1
 
