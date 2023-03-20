@@ -676,7 +676,6 @@ local function rotateCollapsedModel(model, rotX, rotY, rotZ)
 		rotatedModel[#rotatedModel][12] = polygon[12]
 		rotatedModel[#rotatedModel][13] = polygon[13]
 		rotatedModel[#rotatedModel][14] = polygon[14]
-		rotatedModel[#rotatedModel][15] = polygon[15]
 	end
 
 	return rotatedModel
@@ -1323,7 +1322,6 @@ function loadModelRaw(model)
 		transformedModel[#transformedModel][12] = polygon.char
 		transformedModel[#transformedModel][13] = polygon.charc
 		transformedModel[#transformedModel][14] = polygon.outlineColor
-		transformedModel[#transformedModel][15] = i
 
 		local d1 = sqrt(polygon.x1*polygon.x1 + polygon.y1*polygon.y1 + polygon.z1*polygon.z1)
 		local d2 = sqrt(polygon.x2*polygon.x2 + polygon.y2*polygon.y2 + polygon.z2*polygon.z2)
@@ -1987,6 +1985,7 @@ local function newFrame(x1, y1, x2, y2)
 	---@param y number
 	---@return number|nil objectIndex index of a PineObject that was found at the given coordinates in the given table
 	---@return number|nil polyIndex index of the Polygon in the Model of the PineObject if one was found
+	---@return number|nil depth depth from the camera to the Polygon found
 	function frame:getObjectIndexTrace(objects, x, y)
 		local function sign(x1, y1, x2, y2, x3, y3)
 			return (x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3)
@@ -2105,11 +2104,11 @@ local function newFrame(x1, y1, x2, y2)
 
 								if not selfBlittleOn then
 									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, selfX1, selfY1, selfX2, selfY2) then
-										solutions[#solutions+1] = {objectIndex = i, polygonIndex = polygon[15], depth = depth}
+										solutions[#solutions+1] = {objectIndex = i, polygonIndex = j, depth = depth}
 									end
 								else
 									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, (selfX2 - 1) * 2 + 1, (selfY1 - 1) * 3 + 1, (selfX2) * 2, (selfY2 + 1) * 3) then
-										solutions[#solutions+1] = {objectIndex = i, polygonIndex = polygon[15], depth = depth}
+										solutions[#solutions+1] = {objectIndex = i, polygonIndex = j, depth = depth}
 									end
 								end
 							end
@@ -2122,7 +2121,7 @@ local function newFrame(x1, y1, x2, y2)
 		if #solutions <= 0 then
 			return
 		elseif #solutions == 1 then
-			return solutions[1].objectIndex, solutions[1].polygonIndex
+			return solutions[1].objectIndex, solutions[1].polygonIndex, solutions[1].depth
 		end
 
 		local closestSolution = -1
@@ -2136,7 +2135,7 @@ local function newFrame(x1, y1, x2, y2)
 		end
 
 		local solution = solutions[closestSolution]
-		return solution.objectIndex, solution.polygonIndex
+		return solution.objectIndex, solution.polygonIndex, solution.depth
 	end
 
 	---Creates a new PineObject
