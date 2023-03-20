@@ -10,13 +10,13 @@ for i = 1, 16 do
 end
 
 local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
-    local freq = {}
-    freq[p1] = 1
-    freq[p2] = (freq[p2] or 0) + 1
-    freq[p3] = (freq[p3] or 0) + 1
-    freq[p4] = (freq[p4] or 0) + 1
-    freq[p5] = (freq[p5] or 0) + 1
-    freq[p6] = (freq[p6] or 0) + 1
+	local freq = {}
+	freq[p1] = 1
+	freq[p2] = (freq[p2] or 0) + 1
+	freq[p3] = (freq[p3] or 0) + 1
+	freq[p4] = (freq[p4] or 0) + 1
+	freq[p5] = (freq[p5] or 0) + 1
+	freq[p6] = (freq[p6] or 0) + 1
 
 	local highest = p1
 	local highestCount = 0
@@ -75,7 +75,7 @@ local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
 	if p6 == c1 or p6 ~= c2 and cc(p6, c1, c2) then
 		return allChars[bxor(31, charNr)], true
 	end
-    return allChars[charNr], false
+	return allChars[charNr], false
 end
 
 local lookup = {}
@@ -91,18 +91,18 @@ local function drawBuffer(buffer, win)
 	local blit = win.blit
 	local colorChar = colorChar
 	local lookup = lookup
-    for y = 1, floor(height / 3) do
-        local oy = (y-1) * 3 + 1
+	for y = 1, floor(height / 3) do
+		local oy = (y-1) * 3 + 1
 
-        local r1 = buffer[oy] -- first row from buffer for this row of characters
-        local r2 = buffer[oy+1] -- second row from buffer for this row of characters
-        local r3 = buffer[oy+2] -- third row from buffer for this row of characters
+		local r1 = buffer[oy] -- first row from buffer for this row of characters
+		local r2 = buffer[oy+1] -- second row from buffer for this row of characters
+		local r3 = buffer[oy+2] -- third row from buffer for this row of characters
 
-        local blitC1 = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
-        local blitC2 = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
-        local blitChar = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
-        for x = 1, maxX do
-            local ox = (x-1) * 2 + 1
+		local blitC1 = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+		local blitC2 = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+		local blitChar = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
+		for x = 1, maxX do
+			local ox = (x-1) * 2 + 1
 
 			local p1 = r1[ox]
 			local p2 = r1[ox+1]
@@ -114,22 +114,22 @@ local function drawBuffer(buffer, win)
 				local c = colorChar[p1]
 				blitC1[x] = c
 				blitC2[x] = c
-	            blitChar[x] = "\x80"
+				blitChar[x] = "\x80"
 			else
 				local sum = p2 .. p3 .. p4 .. p5 .. p6
 				local look = lookup[p1][sum]
 				if look then
 					blitC1[x] = look[1]
 					blitC2[x] = look[2]
-		            blitChar[x] = look[3]
+					blitChar[x] = look[3]
 				else
-		            local c1, c2 = getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
-		            local char, swapColors = getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
-		            if swapColors then
+					local c1, c2 = getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
+					local char, swapColors = getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
+					if swapColors then
 						local cC2 = colorChar[c2]
 						local cC1 = colorChar[c1]
-		                blitC1[x] = cC2
-		                blitC2[x] = cC1
+						blitC1[x] = cC2
+						blitC2[x] = cC1
 						if lookup[p1] then
 							lookup[p1][sum] = {
 								cC2,
@@ -145,11 +145,11 @@ local function drawBuffer(buffer, win)
 								}
 							}
 						end
-		            else
+					else
 						local cC2 = colorChar[c2]
 						local cC1 = colorChar[c1]
-		                blitC1[x] = cC1
-		                blitC2[x] = cC2
+						blitC1[x] = cC1
+						blitC2[x] = cC2
 						if lookup[p1] then
 							lookup[p1][sum] = {
 								cC1,
@@ -165,18 +165,18 @@ local function drawBuffer(buffer, win)
 								}
 							}
 						end
-		            end
-		            blitChar[x] = char
+					end
+					blitChar[x] = char
 				end
 			end
-        end
+		end
 		local con = concat
 		local c1 = con(blitChar)
 		local c2 = con(blitC1)
 		local c3 = con(blitC2)
 		setCursorPos(1, y)
-        blit(c1, c2, c3)
-    end
+		blit(c1, c2, c3)
+	end
 end
 
 return {
