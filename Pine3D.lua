@@ -192,17 +192,56 @@ local function newBuffer(x1, y1, x2, y2)
 	---@alias PaintUtilsImage table
 
 	---Render an image to the Buffer at a given offset
-	---@param dx number
-	---@param dy number
+	---@param x number
+	---@param y number
 	---@param image PaintUtilsImage can be loaded with paintutils.loadImage (from .nfp)
-	function buffer:image(dx, dy, image)
-		for y, row in pairs(image) do
-			for x, value in pairs(row) do
-				if value and value > 0 then
-					if self.blittleOn then
-						self:setPixel(x + (dx - 1) * 2, y + (dy - 1) * 3, value, value, " ")
-					else
-						self:setPixel(x + dx - 1, y + dy - 1, value, value, " ")
+	---@param dXSub number subpixel offset when high res mode is used
+	---@param dYSub number subpixel offset when high res mode is used
+	function buffer:image(x, y, image, dXSub, dYSub)
+		local screenBuffer = self.screenBuffer
+		local width = self.width
+
+		if self.blittleOn then
+			local dx = (floor(x+0.5) - 1) * 2 + (dXSub or 0)
+			local dy = (floor(y+0.5) - 1) * 3 + (dYSub or 0)
+			local c2 = screenBuffer.c2
+
+			for yImage, row in pairs(image) do
+				local drawY = yImage + dy
+				local c2Y = c2[drawY]
+				if c2Y then
+					for xImage, value in pairs(row) do
+						if value and value > 0 then
+							local drawX = xImage + dx
+							if drawX >= 1 and drawX <= width then
+								c2Y[drawX] = value
+							end
+						end
+					end
+				end
+			end
+		else
+			local dx = floor(x+0.5) - 1
+			local dy = floor(y+0.5) - 1
+			local c1 = screenBuffer.c1
+			local c2 = screenBuffer.c2
+			local chars = screenBuffer.chars
+
+			for yImage, row in pairs(image) do
+				local drawY = yImage + dy
+				local c1Y = c1[drawY]
+				local c2Y = c2[drawY]
+				local charsY = chars[drawY]
+				if c2Y then
+					for xImage, value in pairs(row) do
+						if value and value > 0 then
+							local drawX = xImage + dx
+							if drawX >= 1 and drawX <= width then
+								c1Y[xImage] = colorChar[c1]
+								c2Y[xImage] = colorChar[c2 or c1]
+								charsY[xImage] = " "
+							end
+						end
 					end
 				end
 			end
