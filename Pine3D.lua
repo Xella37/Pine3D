@@ -40,7 +40,8 @@ local function newBuffer(x1, y1, x2, y2)
 		width = x2 - x1 + 1,
 		height = y2 - y1 + 1,
 		screenBuffer = {{}},
-		blittleWindow = nil,
+		---@type Window
+		blittleWindow = window.create(term.current(), x1, y1, x2 - x1 + 1, y2 - y1 + 1, false),
 		blittleOn = false,
 		backgroundColor = colors.lightBlue
 	}
@@ -60,9 +61,7 @@ local function newBuffer(x1, y1, x2, y2)
 		self.width = newX2 - newX1 + 1
 		self.height = newY2 - newY1 + 1
 
-		if self.blittleWindow then
-			self.blittleWindow = self.blittleWindow.reposition(self.x1, self.y1, self.x1 + self.width-1, self.y1 + self.height-1)
-		end
+		self.blittleWindow.reposition(self.x1, self.y1, self.width, self.height)
 
 		self:clear()
 	end
@@ -590,15 +589,8 @@ local function newBuffer(x1, y1, x2, y2)
 
 	function buffer:drawBufferBLittle()
 		local blittleWindow = self.blittleWindow
-		if not blittleWindow then
-			self.blittleWindow = window.create(term.current(), self.x1, self.y1, self.x1 + self.width-1, self.y1 + self.height-1, false)
-			blittleWindow = self.blittleWindow
-		end
-
 		betterblittle.drawBuffer(self.screenBuffer.c2, blittleWindow)
-		---@diagnostic disable-next-line: need-check-nil
 		blittleWindow.setVisible(true)
-		---@diagnostic disable-next-line: need-check-nil
 		blittleWindow.setVisible(false)
 	end
 
