@@ -40,7 +40,6 @@ local function newBuffer(x1, y1, x2, y2)
 		width = x2 - x1 + 1,
 		height = y2 - y1 + 1,
 		screenBuffer = {{}},
-		---@type Window
 		blittleWindow = window.create(term.current(), x1, y1, x2 - x1 + 1, y2 - y1 + 1, false),
 		blittleOn = false,
 		backgroundColor = colors.lightBlue
