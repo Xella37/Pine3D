@@ -117,6 +117,24 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
+	function buffer:clearDepth()
+		local screenBuffer = self.screenBuffer
+
+		screenBuffer.depth = {}
+		local depth = screenBuffer.depth
+
+		local big = math.huge
+		local width = self.width
+
+		for y = 1, self.height do
+			depth[y] = {}
+			local depthY = depth[y]
+			for x = 1, width do
+				depthY[x] = big
+			end
+		end
+	end
+
 	---Clear the Buffer quickly without blittle enabled
 	function buffer:fastClearNormal()
 		local c = self.backgroundColor
@@ -1933,6 +1951,7 @@ local function newFrame(x1, y1, x2, y2)
 	---Draw objects and render them to the internal Buffer
 	---@param objects PineObject[]
 	function frame:drawObjects(objects)
+		self.buffer:clearDepth()
 		local camera = self.camera
 		---@class CameraAngles
 		local cameraAngles = {
@@ -2586,5 +2605,5 @@ return {
 	-- newLoDManager = newLoDManager,
 	linear = linear,
 	models = models,
-	-- transforms = transforms,
+	transforms = transforms,
 }
