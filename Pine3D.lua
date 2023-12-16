@@ -1071,6 +1071,11 @@ function transforms.decimate(model, quality, mode)
 		return (dx*dx + dy*dy + dz*dz)^0.5
 	end
 
+	---@class EdgeCandidate
+	---@field length number
+	---@field vA number vertex index
+	---@field vB number vertex index
+
 	---@type EdgeCandidate[]
 	local candidateEdges = {}
 	for i = 1, #triangles do
@@ -1088,7 +1093,6 @@ function transforms.decimate(model, quality, mode)
 			vertices[triangle[3]]
 		)
 
-		---@class EdgeCandidate
 		candidateEdges[#candidateEdges+1] = {
 			length = edge1Length,
 			vA = triangle[1],
@@ -1396,6 +1400,9 @@ function loadModel(path)
 	end
 	local content = modelFile.readAll()
 	modelFile.close()
+	if not content then
+		error("Failed to parse model for an object at path: " .. path)
+	end
 
 	---@class Model
 	---@field invertTriangles fun(self: Model): Model Inverts the direction of all triangles
@@ -1475,6 +1482,7 @@ local function newFrame(x1, y1, x2, y2)
 
 	function frame:setBackgroundColor(c)
 		local buff = self.buffer
+		---@diagnostic disable-next-line: inject-field
 		buff.backgroundColor = c
 		buff:fastClear()
 	end
@@ -2279,6 +2287,19 @@ end
 local models = {}
 local function newPoly(x1, y1, z1, x2, y2, z2, x3, y3, z3, c)
 	---@class Polygon
+	---@field x1 number
+	---@field y1 number
+	---@field z1 number
+	---@field x2 number
+	---@field y2 number
+	---@field z2 number
+	---@field x3 number
+	---@field y3 number
+	---@field z3 number
+	---@field c number color
+	---@field forceRender boolean?
+
+	---@type Polygon
 	local poly = {
 		x1 = x1, y1 = y1, z1 = z1, x2 = x2, y2 = y2, z2 = z2, x3 = x3, y3 = y3, z3 = z3,
 		c = c,
@@ -2523,7 +2544,7 @@ function models:plane(options)
 
 	return plane
 end
----@param options {res: number?, randomOffset: number?, height: number?, randomHeight: number?, y: number?, scale: number?, color: number?, snowColor: number?, snow: number?, snowHeight: number?}
+---@param options {res: number?, randomOffset: number?, height: number?, randomHeight: number?, y: number?, scale: number?, color: number?, snowColor: number?, snow: boolean?, snowHeight: number?}
 function models:mountains(options)
 	options.res = options.res or 20
 	options.randomOffset = options.randomOffset or 0
