@@ -4,21 +4,6 @@
 local libFolder = (...):match("(.-)[^%.]+$")
 local betterblittle = require(libFolder .. "betterblittle")
 
-local colorChar = {}
-for i = 1, 16 do
-	colorChar[2 ^ (i - 1)] = ("0123456789abcdef"):sub(i, i)
-end
-
-local large = math.pow(10, 99)
-local function linear(x1, y1, x2, y2)
-	local dx = x2 - x1
-	if dx == 0 then
-		return large, -large * x1
-	end
-	local a = (y2 - y1) / dx
-	return a, y1 - a * x1
-end
-
 local min = math.min
 local max = math.max
 local floor = math.floor
@@ -40,8 +25,7 @@ local function newBuffer(x1, y1, x2, y2)
 		width = x2 - x1 + 1,
 		height = y2 - y1 + 1,
 		screenBuffer = {{}},
-		blittleWindow = window.create(term.current(), x1, y1, x2 - x1 + 1, y2 - y1 + 1, false),
-		blittleOn = false,
+		blitWin = window.create(term.current(), x1, y1, x2 - x1 + 1, y2 - y1 + 1, false),
 		backgroundColor = colors.lightBlue
 	}
 
@@ -60,7 +44,7 @@ local function newBuffer(x1, y1, x2, y2)
 		self.width = newX2 - newX1 + 1
 		self.height = newY2 - newY1 + 1
 
-		self.blittleWindow.reposition(self.x1, self.y1, self.width, self.height)
+		self.blitWin.reposition(self.x1, self.y1, self.width, self.height)
 
 		self:clear()
 	end
@@ -74,109 +58,47 @@ local function newBuffer(x1, y1, x2, y2)
 		local c2 = screenBuffer.c2
 		local depth = screenBuffer.depth
 
-		local big = math.huge
+		local bigNeg = math.huge
 		local width = self.width
 		local color = self.backgroundColor
 
-		if self.blittleOn then
-			for y = 1, self.height do
-				c2[y] = {}
-				depth[y] = {}
-				local c2Y = c2[y]
-				local depthY = depth[y]
-				for x = 1, width do
-					c2Y[x] = color
-					depthY[x] = big
-				end
-			end
-		else
-			local colorC = colorChar[color]
-
-			screenBuffer.c1 = {}
-			local c1 = screenBuffer.c1
-
-			screenBuffer.chars = {}
-			local chars = screenBuffer.chars
-
-			for y = 1, self.height do
-				c1[y] = {}
-				c2[y] = {}
-				chars[y] = {}
-				depth[y] = {}
-				local c1Y = c1[y]
-				local c2Y = c2[y]
-				local charsY = chars[y]
-				local depthY = depth[y]
-				for x = 1, width do
-					c1Y[x] = colorC
-					c2Y[x] = colorC
-					charsY[x] = " "
-					depthY[x] = big
-				end
+		for y = 1, self.height do
+			c2[y] = {}
+			depth[y] = {}
+			local c2Y = c2[y]
+			local depthY = depth[y]
+			for x = 1, width do
+				c2Y[x] = color
+				depthY[x] = bigNeg
 			end
 		end
 	end
 
 	function buffer:clearDepth()
 		local screenBuffer = self.screenBuffer
-
-		screenBuffer.depth = {}
 		local depth = screenBuffer.depth
 
-		local big = math.huge
+		local bigNeg = -math.huge
 		local width = self.width
 
 		for y = 1, self.height do
-			depth[y] = {}
 			local depthY = depth[y]
 			for x = 1, width do
-				depthY[x] = big
+				depthY[x] = bigNeg
 			end
 		end
 	end
 
-	---Clear the Buffer quickly without blittle enabled
-	function buffer:fastClearNormal()
-		local c = self.backgroundColor
-
-		local screenBuffer = self.screenBuffer
-		local chars = screenBuffer.chars
-		local c1 = screenBuffer.c1
-		local c2 = screenBuffer.c2
-		local depth = self.screenBuffer.depth
-
-		local c = colorChar[c]
-
-		local big = math.huge
-		local width = self.width
-		for y = 1, self.height do
-			local charsY = chars[y]
-			local c1Y = c1[y]
-			local c2Y = c2[y]
-			local depthY = depth[y]
-			for x = 1, width do
-				charsY[x] = " "
-				c1Y[x] = c
-				c2Y[x] = c
-				depthY[x] = big
-			end
-		end
-	end
-
-	---Clear the Buffer quickly with blittle enabled
-	function buffer:fastClearBLittle()
+	---Clear the Buffer quickly
+	function buffer:fastClear()
 		local c = self.backgroundColor
 		local c2 = self.screenBuffer.c2
-		local depth = self.screenBuffer.depth
 
-		local big = math.huge
 		local width = self.width
 		for y = 1, self.height do
 			local c2Y = c2[y]
-			local depthY = depth[y]
 			for x = 1, width do
 				c2Y[x] = c
-				depthY[x] = big
 			end
 		end
 	end
@@ -184,23 +106,15 @@ local function newBuffer(x1, y1, x2, y2)
 	---Set the color of an individual pixel
 	---@param x number
 	---@param y number
-	---@param c1 number color for the pixel
-	---@param c2 string? color for the pixel
-	---@param char string? char for the pixel
-	function buffer:setPixel(x, y, c1, c2, char)
-		x = math.floor(x+0.5)
-		y = math.floor(y+0.5)
+	---@param c number color for the pixel
+	function buffer:setPixel(x, y, c)
+		x = floor(x+0.5)
+		y = floor(y+0.5)
 
 		if x >= 1 and x <= self.width then
 			if y >= 1 and y <= self.height then
 				local screenBuffer = self.screenBuffer
-				if self.blittleOn then
-					screenBuffer.c2[y][x] = c2 or c1
-				else
-					screenBuffer.c1[y][x] = colorChar[c1]
-					screenBuffer.c2[y][x] = colorChar[c2 or c1]
-					screenBuffer.chars[y][x] = " "
-				end
+				screenBuffer.c2[y][x] = c
 			end
 		end
 	end
@@ -217,46 +131,19 @@ local function newBuffer(x1, y1, x2, y2)
 		local screenBuffer = self.screenBuffer
 		local width = self.width
 
-		if self.blittleOn then
-			local dx = (floor(x+0.5) - 1) * 2 + (dXSub or 0)
-			local dy = (floor(y+0.5) - 1) * 3 + (dYSub or 0)
-			local c2 = screenBuffer.c2
+		local dx = (floor(x+0.5) - 1) * 2 + (dXSub or 0)
+		local dy = (floor(y+0.5) - 1) * 3 + (dYSub or 0)
+		local c2 = screenBuffer.c2
 
-			for yImage, row in pairs(image) do
-				local drawY = yImage + dy
-				local c2Y = c2[drawY]
-				if c2Y then
-					for xImage, value in pairs(row) do
-						if value and value > 0 then
-							local drawX = xImage + dx
-							if drawX >= 1 and drawX <= width then
-								c2Y[drawX] = value
-							end
-						end
-					end
-				end
-			end
-		else
-			local dx = floor(x+0.5) - 1
-			local dy = floor(y+0.5) - 1
-			local c1 = screenBuffer.c1
-			local c2 = screenBuffer.c2
-			local chars = screenBuffer.chars
-
-			for yImage, row in pairs(image) do
-				local drawY = yImage + dy
-				local c1Y = c1[drawY]
-				local c2Y = c2[drawY]
-				local charsY = chars[drawY]
-				if c2Y then
-					for xImage, value in pairs(row) do
-						if value and value > 0 then
-							local drawX = xImage + dx
-							if drawX >= 1 and drawX <= width then
-								c1Y[xImage] = colorChar[c1]
-								c2Y[xImage] = colorChar[c2 or c1]
-								charsY[xImage] = " "
-							end
+		for yImage, row in pairs(image) do
+			local drawY = yImage + dy
+			local c2Y = c2[drawY]
+			if c2Y then
+				for xImage, value in pairs(row) do
+					if value and value > 0 then
+						local drawX = xImage + dx
+						if drawX >= 1 and drawX <= width then
+							c2Y[drawX] = value
 						end
 					end
 				end
@@ -264,64 +151,40 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
-	function buffer:loadLineNormal(x1, y1, x2, y2, c, char, charc, a, b, depth)
+	function buffer:loadLineNoInterp(x1, y1, x2, y2, c, depthInverted)
 		local screenBuffer = self.screenBuffer
-		local c1 = screenBuffer.c1
 		local c2 = screenBuffer.c2
-		local chars = screenBuffer.chars
 		local depthBuffer = screenBuffer.depth
 
 		local frameWidth = self.width
 		local frameHeight = self.height
 
-		if x2 >= x1 then
-			for x = max(ceil(x1), 1), min(floor(x2), frameWidth) do
-				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
-					c1[y][x] = charc
+		local dx = x2 - x1
+		local dy = y2 - y1
+
+		if dx ~= 0 then
+			for x = max(ceil(min(x1, x2)), 1), min(floor(max(x1, x2)), frameWidth) do
+				local xRatio = (x - x1) / dx
+				local y = floor(y1 + xRatio * dy + 0.5)
+				if y > 0 and y <= frameHeight and depthInverted >= depthBuffer[y][x] then
 					c2[y][x] = c
-					chars[y][x] = char
-					depthBuffer[y][x] = depth
-				end
-			end
-		else
-			for x = max(ceil(x2), 1), min(floor(x1), frameWidth) do
-				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
-					c1[y][x] = charc
-					c2[y][x] = c
-					chars[y][x] = char
-					depthBuffer[y][x] = depth
+					depthBuffer[y][x] = depthInverted
 				end
 			end
 		end
-
-		if y2 >= y1 then
-			for y = max(ceil(y1), 1), min(floor(y2), frameHeight) do
-				local x = floor((y - b) / a + 0.5)
-				local depthBufferY = depthBuffer[y]
-				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
-					c1[y][x] = charc
+		if dy ~= 0 then
+			for y = max(ceil(min(y1, y2)), 1), min(floor(max(y1, y2)), frameHeight) do
+				local yRatio = (y - y1) / dy
+				local x = floor(x1 + yRatio * dx + 0.5)
+				if x > 0 and x <= frameWidth and depthInverted >= depthBuffer[y][x] then
 					c2[y][x] = c
-					chars[y][x] = char
-					depthBufferY[x] = depth
-				end
-			end
-		else
-			for y = max(ceil(y2), 1), min(floor(y1), frameHeight) do
-				local x = floor((y - b) / a + 0.5)
-				local depthBufferY = depthBuffer[y]
-				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
-					c1[y][x] = charc
-					c2[y][x] = c
-					chars[y][x] = char
-					depthBufferY[x] = depth
+					depthBuffer[y][x] = depthInverted
 				end
 			end
 		end
 	end
 
-	function buffer:loadLineBLittle(x1, y1, x2, y2, c, a, b, depth)
+	function buffer:loadLineInterp(x1, y1, x2, y2, c, z1Inv, z2Inv)
 		local screenBuffer = self.screenBuffer
 		local c2 = screenBuffer.c2
 		local depthBuffer = screenBuffer.depth
@@ -329,40 +192,36 @@ local function newBuffer(x1, y1, x2, y2)
 		local frameWidth = self.width
 		local frameHeight = self.height
 
-		if x2 >= x1 then
-			for x = max(ceil(x1), 1), min(floor(x2), frameWidth) do
-				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
+		x1 = x1 + 0.5
+		x2 = x2 + 0.5
+		y1 = y1 - 0.5
+		y2 = y2 - 0.5
+
+		local dx = x2 - x1
+		local dy = y2 - y1
+		local slopeZInv = z2Inv - z1Inv
+
+		if dx ~= 0 then
+			for x = max(ceil(min(x1, x2)), 1), min(floor(max(x1, x2)), frameWidth) do
+				local xRatio = (x - x1) / dx
+
+				local y = floor(y1 + xRatio * dy + 0.5)
+				local zInv = z1Inv + xRatio * slopeZInv
+				if y > 0 and y <= frameHeight and zInv >= depthBuffer[y][x] then
 					c2[y][x] = c
-					depthBuffer[y][x] = depth
-				end
-			end
-		else
-			for x = max(ceil(x2), 1), min(floor(x1), frameWidth) do
-				local y = floor(a * x + b + 0.5)
-				if y > 0 and y <= frameHeight and depth <= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = depth
+					depthBuffer[y][x] = zInv
 				end
 			end
 		end
+		if dy ~= 0 then
+			for y = max(ceil(min(y1, y2)), 1), min(floor(max(y1, y2)), frameHeight) do
+				local yRatio = (y - y1) / dy
 
-		if y2 >= y1 then
-			for y = max(ceil(y1), 1), min(floor(y2), frameHeight) do
-				local x = floor((y - b) / a + 0.5)
-				local depthBufferY = depthBuffer[y]
-				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
+				local x = floor(x1 + yRatio * dx + 0.5)
+				local zInv = z1Inv + yRatio * slopeZInv
+				if x > 0 and x <= frameWidth and zInv >= depthBuffer[y][x] then
 					c2[y][x] = c
-					depthBufferY[x] = depth
-				end
-			end
-		else
-			for y = max(ceil(y2), 1), min(floor(y1), frameHeight) do
-				local x = floor((y - b) / a + 0.5)
-				local depthBufferY = depthBuffer[y]
-				if x > 0 and x <= frameWidth and depth <= depthBufferY[x] then
-					c2[y][x] = c
-					depthBufferY[x] = depth
+					depthBuffer[y][x] = zInv
 				end
 			end
 		end
@@ -370,121 +229,9 @@ local function newBuffer(x1, y1, x2, y2)
 
 	local defaultOutlineColor = colors.black
 
-	function buffer:drawTriangleNormal(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor, depth)
-		if x1 < 1 and x2 < 1 and x3 < 1 or y1 < 1 and y2 < 1 and y3 < 1 then return end
-		local frameWidth = self.width
-		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then return end
-		local frameHeight = self.height
-		if y1 > frameHeight and y2 > frameHeight and y3 > frameHeight then return end
+	function buffer:drawTriangleNoInterp(x1, y1, x2, y2, x3, y3, c, outlineColor, depth)
+		if x1 < 0 and x2 < 0 and x3 < 0 or y1 < 1 and y2 < 1 and y3 < 1 then return end
 
-		if y1 > y2 then
-			y1, y2 = y2, y1
-			x1, x2 = x2, x1
-		end
-		if y2 > y3 then
-			y3, y2 = y2, y3
-			x3, x2 = x2, x3
-		end
-		if y1 > y2 then
-			y1, y2 = y2, y1
-			x1, x2 = x2, x1
-		end
-
-		local screenBuffer = self.screenBuffer
-
-		local floor, ceil = floor, ceil
-		local min, max = min, max
-
-		local minY = min(max(1, ceil(y1)), frameHeight)
-		local midY = min(max(0, floor(y2)), frameHeight)
-		local maxY = min(max(1, floor(y3)), frameHeight)
-
-		local c1 = screenBuffer.c1
-		local c2 = screenBuffer.c2
-		local chars = screenBuffer.chars
-		local depthBuffer = screenBuffer.depth
-
-		local x2_x1_div_y2_y1 = (x2 - x1) / (y2 - y1)
-		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
-
-		char = char or " "
-		charc = charc or c
-		local c = colorChar[c]
-		local charc = colorChar[charc]
-
-		if y1 ~= y2 and y1 ~= y3 then
-			for y = minY, midY do
-				local c1Y = c1[y]
-				local c2Y = c2[y]
-				local charsY = chars[y]
-				local depthY = depthBuffer[y]
-
-				local xA = (y - y1) * x2_x1_div_y2_y1 + x1
-				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-				if xB < xA then xA, xB = xB, xA end
-
-				if xA < 1 then xA = 1 end
-				if xA > frameWidth then xA = frameWidth + 1 end
-				if xB < 1 then xB = 0 end
-				if xB > frameWidth then xB = frameWidth end
-
-				for x = floor(xA+0.5), floor(xB+0.5) do
-					if depth < depthY[x] then
-						depthY[x] = depth
-						c1Y[x] = charc
-						c2Y[x] = c
-						charsY[x] = char
-					end
-				end
-			end
-		end
-
-		local x3_x2_div_y3_y2 = (x3 - x2) / (y3 - y2)
-		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
-
-		if y3 ~= y2 and y1 ~= y3 then
-			for y = midY+1, maxY do
-				local c1Y = c1[y]
-				local c2Y = c2[y]
-				local charsY = chars[y]
-				local depthY = depthBuffer[y]
-
-				local xA = (y - y2) * x3_x2_div_y3_y2 + x2
-				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-				if xB < xA then xA, xB = xB, xA end
-
-				if xA < 1 then xA = 1 end
-				if xA > frameWidth then xA = frameWidth + 1 end
-				if xB < 1 then xB = 0 end
-				if xB > frameWidth then xB = frameWidth end
-
-				for x = floor(xA+0.5), floor(xB+0.5) do
-					if depth < depthY[x] then
-						depthY[x] = depth
-						c1Y[x] = charc
-						c2Y[x] = c
-						charsY[x] = char
-					end
-				end
-			end
-		end
-
-		local outlineColor = outlineColor
-		if outlineColor or self.triangleEdges then
-			local a1, b1 = linear(x1, y1, x2, y2)
-			local a2, b2 = linear(x2, y2, x3, y3)
-			local a3, b3 = linear(x1, y1, x3, y3)
-
-			local loadLine = self.loadLineNormal
-			local c = colorChar[outlineColor or defaultOutlineColor]
-			loadLine(self, x1, y1, x2, y2, c, char, charc, a1, b1, depth)
-			loadLine(self, x2, y2, x3, y3, c, char, charc, a2, b2, depth)
-			loadLine(self, x3, y3, x1, y1, c, char, charc, a3, b3, depth)
-		end
-	end
-
-	function buffer:drawTriangleBLittle(x1, y1, x2, y2, x3, y3, c, char, charc, outlineColor, depth)
-		if x1 < 1 and x2 < 1 and x3 < 1 or y1 < 1 and y2 < 1 and y3 < 1 then return end
 		local frameWidth = self.width
 		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then return end
 		local frameHeight = self.height
@@ -514,53 +261,56 @@ local function newBuffer(x1, y1, x2, y2)
 
 		local c2 = screenBuffer.c2
 		local depthBuffer = screenBuffer.depth
-
-		local x2_x1_div_y2_y1 = (x2 - x1) / (y2 - y1)
-		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
+		local depthInverted = 1 / depth
 
 		if y1 ~= y2 and y1 ~= y3 then
+			local slopeX_YA = (x2 - x1) / (y2 - y1)
+			local slopeX_YB = (x3 - x1) / (y3 - y1)
+
 			for y = minY, midY do
+				local dy = y - y1
+				local xA = x1 + dy * slopeX_YA
+				local xB = x1 + dy * slopeX_YB
+				if xB < xA then xA, xB = xB, xA end
+
+				local xABounded = floor(xA+0.5)
+				local xBBounded = floor(xB+0.5)
+				if xABounded < 1 then xABounded = 1 end
+				if xBBounded > frameWidth then xBBounded = frameWidth end
+
 				local c2Y = c2[y]
 				local depthY = depthBuffer[y]
 
-				local xA = (y - y1) * x2_x1_div_y2_y1 + x1
-				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-				if xB < xA then xA, xB = xB, xA end
-
-				if xA < 1 then xA = 1 end
-				if xA > frameWidth then xA = frameWidth + 1 end
-				if xB < 1 then xB = 0 end
-				if xB > frameWidth then xB = frameWidth end
-
-				for x = floor(xA+0.5), floor(xB+0.5) do
-					if depth < depthY[x] then
-						depthY[x] = depth
+				for x = xABounded, xBBounded do
+					if depthInverted > depthY[x] then
+						depthY[x] = depthInverted
 						c2Y[x] = c
 					end
 				end
 			end
 		end
 
-		local x3_x2_div_y3_y2 = (x3 - x2) / (y3 - y2)
-		local x1_x3_div_y1_y3 = (x1 - x3) / (y1 - y3)
-
 		if y3 ~= y2 and y1 ~= y3 then
+			local slopeX_YA = (x2 - x3) / (y2 - y3)
+			local slopeX_YB = (x1 - x3) / (y1 - y3)
+
 			for y = midY+1, maxY do
+				local dy = y - y3
+				local xA = x3 + dy * slopeX_YA
+				local xB = x3 + dy * slopeX_YB
+				if xB < xA then xA, xB = xB, xA end
+
+				local xABounded = floor(xA+0.5)
+				local xBBounded = floor(xB+0.5)
+				if xABounded < 1 then xABounded = 1 end
+				if xBBounded > frameWidth then xBBounded = frameWidth end
+
 				local c2Y = c2[y]
 				local depthY = depthBuffer[y]
 
-				local xA = (y - y2) * x3_x2_div_y3_y2 + x2
-				local xB = (y - y3) * x1_x3_div_y1_y3 + x3
-				if xB < xA then xA, xB = xB, xA end
-
-				if xA < 1 then xA = 1 end
-				if xA > frameWidth then xA = frameWidth + 1 end
-				if xB < 1 then xB = 0 end
-				if xB > frameWidth then xB = frameWidth end
-
-				for x = floor(xA+0.5), floor(xB+0.5) do
-					if depth < depthY[x] then
-						depthY[x] = depth
+				for x = xABounded, xBBounded do
+					if depthInverted > depthY[x] then
+						depthY[x] = depthInverted
 						c2Y[x] = c
 					end
 				end
@@ -569,53 +319,165 @@ local function newBuffer(x1, y1, x2, y2)
 
 		local outlineColor = outlineColor
 		if outlineColor or self.triangleEdges then
-			local a1, b1 = linear(x1, y1, x2, y2)
-			local a2, b2 = linear(x2, y2, x3, y3)
-			local a3, b3 = linear(x1, y1, x3, y3)
-
-			local loadLine = self.loadLineBLittle
+			local loadLine = self.loadLineNoInterp
 			local c = outlineColor or defaultOutlineColor
-			loadLine(self, x1, y1, x2, y2, c, a1, b1, depth)
-			loadLine(self, x2, y2, x3, y3, c, a2, b2, depth)
-			loadLine(self, x3, y3, x1, y1, c, a3, b3, depth)
+			loadLine(self, x1, y1, x2, y2, c, depthInverted)
+			loadLine(self, x2, y2, x3, y3, c, depthInverted)
+			loadLine(self, x3, y3, x1, y1, c, depthInverted)
 		end
 	end
 
-	function buffer:drawBufferNormal()
-		local x1 = self.x1
-		local y1 = self.y1
+	function buffer:drawTriangleInterp(x1, y1, x2, y2, x3, y3, c, outlineColor, d, z1, z2, z3)
+		if x1 < 0 and x2 < 0 and x3 < 0 or y1 < 1 and y2 < 1 and y3 < 1 then return end
+
+		local frameWidth = self.width
+		if x1 > frameWidth and x2 > frameWidth and x3 > frameWidth then return end
+		local frameHeight = self.height
+		if y1 > frameHeight and y2 > frameHeight and y3 > frameHeight then return end
+
+		if y1 > y2 then
+			y1, y2 = y2, y1
+			x1, x2 = x2, x1
+			z1, z2 = z2, z1
+		end
+		if y2 > y3 then
+			y3, y2 = y2, y3
+			x3, x2 = x2, x3
+			z3, z2 = z2, z3
+		end
+		if y1 > y2 then
+			y1, y2 = y2, y1
+			x1, x2 = x2, x1
+			z1, z2 = z2, z1
+		end
 
 		local screenBuffer = self.screenBuffer
-		local setCursorPos = term.setCursorPos
-		local blit = term.blit
 
-		local chars = screenBuffer.chars
-		local c1 = screenBuffer.c1
+		local floor, ceil = floor, ceil
+		local min, max = min, max
+
+		local minY = min(max(1, ceil(y1)), frameHeight)
+		local midY = min(max(0, floor(y2)), frameHeight)
+		local maxY = min(max(1, floor(y3)), frameHeight)
+
 		local c2 = screenBuffer.c2
-		local concat = table.concat
-		for y = 1, self.height do
-			setCursorPos(x1, y + y1 - 1)
+		local depthBuffer = screenBuffer.depth
+		local z3Inv = 1 / z3
+		local z2Inv = 1 / z2
+		local z1Inv = 1 / z1
 
-			local chars = concat(chars[y])
-			local c1 = concat(c1[y])
-			local c2 = concat(c2[y])
+		if y1 ~= y2 and y1 ~= y3 then
+			local y2_min_y1 = y2 - y1
+			local y3_min_y1 = y3 - y1
 
-			blit(chars, c1, c2)
+			local slopeX_YA = (x2 - x1) / y2_min_y1
+			local slopeX_YB = (x3 - x1) / y3_min_y1
+			local slopeZ_YAInv = z2Inv - z1Inv
+			local slopeZ_YBInv = z3Inv - z1Inv
+
+			for y = minY, midY do
+				local dy = y - y1
+				local xA = x1 + dy * slopeX_YA
+				local xB = x1 + dy * slopeX_YB
+				local yRatioA = dy / y2_min_y1
+				local yRatioB = dy / y3_min_y1
+				local zAInv = z1Inv + yRatioA * slopeZ_YAInv
+				local zBInv = z1Inv + yRatioB * slopeZ_YBInv
+				if xB < xA then
+					xA, xB = xB, xA
+					zAInv, zBInv = zBInv, zAInv
+				end
+
+				local xABounded = floor(xA + 1.5)
+				local xBBounded = floor(xB + 0.5)
+				if xABounded < 1 then xABounded = 1 end
+				if xBBounded > frameWidth then xBBounded = frameWidth end
+
+				xA = floor(xA + 0.5)
+				xB = floor(xB + 1.5)
+				local xLength = xB - xA
+
+				local c2Y = c2[y]
+				local depthY = depthBuffer[y]
+				local slopeZ_XInv = zBInv - zAInv
+
+				for x = xABounded, xBBounded do
+					local xRatio = (x - xA) / xLength
+					local zInv = zAInv + xRatio * slopeZ_XInv
+					if zInv > depthY[x] then
+						depthY[x] = zInv
+						c2Y[x] = c
+					end
+				end
+			end
+		end
+
+		if y3 ~= y2 and y1 ~= y3 then
+			local y2_min_y3 = y2 - y3
+			local y1_min_y3 = y1 - y3
+
+			local slopeX_YA = (x2 - x3) / y2_min_y3
+			local slopeX_YB = (x1 - x3) / y1_min_y3
+			local slopeZ_YAInv = z2Inv - z3Inv
+			local slopeZ_YBInv = z1Inv - z3Inv
+
+			for y = midY+1, maxY do
+				local dy = y - y3
+				local xA = x3 + dy * slopeX_YA
+				local xB = x3 + dy * slopeX_YB
+				local yRatioA = dy / y2_min_y3
+				local yRatioB = dy / y1_min_y3
+				local zAInv = z3Inv + yRatioA * slopeZ_YAInv
+				local zBInv = z3Inv + yRatioB * slopeZ_YBInv
+
+				if xB < xA then
+					xA, xB = xB, xA
+					zAInv, zBInv = zBInv, zAInv
+				end
+
+				local xABounded = floor(xA + 1.5)
+				local xBBounded = floor(xB + 0.5)
+				if xABounded < 1 then xABounded = 1 end
+				if xBBounded > frameWidth then xBBounded = frameWidth end
+
+				xA = floor(xA + 0.5)
+				xB = floor(xB + 1.5)
+				local xLength = xB - xA
+
+				local c2Y = c2[y]
+				local depthY = depthBuffer[y]
+				local slopeZ_XInv = zBInv - zAInv
+
+				for x = xABounded, xBBounded do
+					local xRatio = (x - xA) / xLength
+					local zInv = zAInv + xRatio * slopeZ_XInv
+					if zInv > depthY[x] then
+						depthY[x] = zInv
+						c2Y[x] = c
+					end
+				end
+			end
+		end
+
+		local outlineColor = outlineColor
+		if outlineColor or self.triangleEdges then
+			local loadLine = self.loadLineInterp
+			local c = outlineColor or defaultOutlineColor
+			loadLine(self, x1, y1, x2, y2, c, z1Inv, z2Inv)
+			loadLine(self, x2, y2, x3, y3, c, z2Inv, z3Inv)
+			loadLine(self, x3, y3, x1, y1, c, z3Inv, z1Inv)
 		end
 	end
 
-	function buffer:drawBufferBLittle()
-		local blittleWindow = self.blittleWindow
-		betterblittle.drawBuffer(self.screenBuffer.c2, blittleWindow)
-		blittleWindow.setVisible(true)
-		blittleWindow.setVisible(false)
+	function buffer:drawBuffer()
+		local blitWin = self.blitWin
+		betterblittle.drawBuffer(self.screenBuffer.c2, blitWin)
+		blitWin.setVisible(true)
+		blitWin.setVisible(false)
 	end
 
-	function buffer:highResMode(enabled)
-		self.blittleOn = enabled
-		self.drawTriangle = enabled and self.drawTriangleBLittle or self.drawTriangleNormal
-		self.fastClear = enabled and self.fastClearBLittle or self.fastClearNormal
-		self.drawBuffer = enabled and self.drawBufferBLittle or self.drawBufferNormal
+	function buffer:depthInterpolation(enabled)
+		self.drawTriangle = enabled and self.drawTriangleInterp or self.drawTriangleNoInterp
 		self:clear()
 	end
 
@@ -623,7 +485,7 @@ local function newBuffer(x1, y1, x2, y2)
 		self.triangleEdges = enabled
 	end
 
-	buffer:highResMode(true)
+	buffer:depthInterpolation(true)
 
 	return buffer
 end
@@ -722,8 +584,6 @@ local function rotateCollapsedModel(model, rotX, rotY, rotZ)
 		rotatedModel[#rotatedModel][10] = polygon[10]
 		rotatedModel[#rotatedModel][11] = polygon[11]
 		rotatedModel[#rotatedModel][12] = polygon[12]
-		rotatedModel[#rotatedModel][13] = polygon[13]
-		rotatedModel[#rotatedModel][14] = polygon[14]
 	end
 
 	return rotatedModel
@@ -751,8 +611,6 @@ function transforms.invertTriangles(model)
 			y3 = triangle.y2,
 			z3 = triangle.z2,
 			c = triangle.c,
-			char = triangle.char,
-			charc = triangle.charc,
 			forceRender = triangle.forceRender,
 			outlineColor = triangle.outlineColor,
 		}
@@ -837,7 +695,7 @@ function transforms.center(model)
 		poly.z3 = poly.z3 + offsetZ
 	end
 
-	return model
+	return model, offsetX, offsetY, offsetZ
 end
 
 ---Rescales the model such that the largest value of any coordinate is equal to 1
@@ -1058,7 +916,7 @@ function transforms.decimate(model, quality, mode)
 			i3 = #vertices
 		end
 
-		local triangle = {i1, i2, i3, poly.c, poly.char, poly.charc, poly.forceRender}
+		local triangle = {i1, i2, i3, poly.c, poly.forceRender}
 		triangles[#triangles+1] = triangle
 	end
 
@@ -1204,9 +1062,7 @@ function transforms.decimate(model, quality, mode)
 			y3 = v3[2],
 			z3 = v3[3],
 			c = triangle[4],
-			char = triangle[5],
-			charc = triangle[6],
-			forceRender = triangle[7],
+			forceRender = triangle[5],
 		}
 	end
 
@@ -1287,8 +1143,6 @@ function transforms.toLoD(model, settings)
 					poly[10],
 					poly[11],
 					poly[12],
-					poly[13],
-					poly[14],
 				}
 				modelNew[j] = polyNew
 			end
@@ -1371,9 +1225,7 @@ function loadModelRaw(model)
 		transformedModel[#transformedModel][9] = polygon.z3
 		transformedModel[#transformedModel][10] = polygon.forceRender
 		transformedModel[#transformedModel][11] = polygon.c
-		transformedModel[#transformedModel][12] = polygon.char
-		transformedModel[#transformedModel][13] = polygon.charc
-		transformedModel[#transformedModel][14] = polygon.outlineColor
+		transformedModel[#transformedModel][12] = polygon.outlineColor
 
 		local d1 = sqrt(polygon.x1*polygon.x1 + polygon.y1*polygon.y1 + polygon.z1*polygon.z1)
 		local d2 = sqrt(polygon.x2*polygon.x2 + polygon.y2*polygon.y2 + polygon.z2*polygon.z2)
@@ -1471,11 +1323,10 @@ local function newFrame(x1, y1, x2, y2)
 		y2 = y2,
 		width = width,
 		height = height,
-		blittleOn = false,
-		pixelratio = 1.5,
 	}
 	frame.FoV = 90
 	frame.camera[7] = rad(frame.FoV)
+	frame.camera[8] = 2 * math.atan(math.tan(rad(frame.FoV) * 0.5) / (frame.width / frame.height / 1.5))
 	frame.t = tan(rad(frame.FoV / 2)) * 2 * 0.0001
 
 	local renderOffsetX, renderOffsetY, sXFactor, sYFactor
@@ -1492,7 +1343,7 @@ local function newFrame(x1, y1, x2, y2)
 		renderOffsetY = floor(frame.height * 0.5)
 
 		sXFactor = 0.0001 * frame.width / frame.t
-		sYFactor = -0.0001 * frame.width / (frame.t * frame.height * frame.pixelratio) * frame.height
+		sYFactor = -0.0001 * frame.width / (frame.t * frame.height) * frame.height
 	end
 
 	function frame:setSize(x1, y1, x2, y2)
@@ -1501,37 +1352,17 @@ local function newFrame(x1, y1, x2, y2)
 		self.x2 = x2
 		self.y2 = y2
 
-		if not self.blittleOn then
-			self.buffer:setBufferSize(x1, y1, x2, y2)
-			self.width = x2 - x1 + 1
-			self.height = y2 - y1 + 1
-			self.pixelratio = 1.5
-		else
-			self.width = (x2 - x1 + 1) * 2
-			self.height = (y2 - y1 + 1) * 3
-			self.pixelratio = 1
-			self.buffer:setBufferSize(x1, y1, x1 + self.width - 1, y1 + self.height - 1)
-		end
+		self.width = (x2 - x1 + 1) * 2
+		self.height = (y2 - y1 + 1) * 3
+		self.buffer:setBufferSize(x1, y1, x1 + self.width - 1, y1 + self.height - 1)
 		updateMappingConstants()
 	end
 
-	---If enabled, uses special characters to achieve a higher perceived resolution (enabled by default)
+	---If enabled, uses depth interpolation (enabled by default)
 	---@param enabled boolean
-	function frame:highResMode(enabled)
-		self.blittleOn = enabled
-		self.buffer:highResMode(enabled)
-		if enabled then
-			self.width = (self.x2 - self.x1 + 1) * 2
-			self.height = (self.y2 - self.y1 + 1) * 3
-			self.buffer:setBufferSize(self.x1, self.y1, self.x1 + self.width - 1, self.y1 + self.height - 1)
-			self.pixelratio = 1
-		else
-			self.buffer:setBufferSize(self.x1, self.y1, self.x2, self.y2)
-			self.width = self.x2 - self.x1 + 1
-			self.height = self.y2 - self.y1 + 1
-			self.pixelratio = 1.5
-		end
-		updateMappingConstants()
+	function frame:depthInterpolation(enabled)
+		self.interpolateDepth = enabled
+		self.buffer:depthInterpolation(enabled)
 	end
 
 	function frame:map3dTo2d(x, y, z)
@@ -1606,23 +1437,37 @@ local function newFrame(x1, y1, x2, y2)
 		local dZ = cA3 * dX + cA4 * dZ
 		local dX = dX2
 
-		--local dY2 = cA6 * dY - cA5 * dX
+		local dY2 = cA6 * dY - cA5 * dX
 		local dX = cA5 * dY + cA6 * dX
-		--dY = dY2
+		dY = dY2
 
+		-- frustum culling behind camera (near)
 		if dX < -modelSize then
-			return
+			return true
 		end
 
+		-- frustum culling left/right
 		local FoV = 0.5*camera[7]
 		local dotX = sin(FoV)
 		local dotZ = cos(FoV)
 
 		if (dX + modelSize)*dotX + (dZ + modelSize)*dotZ < 0 then
-			return
+			return true
 		end
 		if (dX + modelSize)*dotX - (dZ - modelSize)*dotZ < 0 then
-			return
+			return true
+		end
+
+		-- frustum culling top/bottom
+		local verticalFOV = 0.5*camera[8]
+		local dotX = sin(verticalFOV)
+		local dotY = cos(verticalFOV)
+
+		if (dX + modelSize)*dotX + (dY + modelSize)*dotY < 0 then
+			return true
+		end
+		if (dX + modelSize)*dotX - (dY - modelSize)*dotY < 0 then
+			return true
 		end
 
 		local rotX = object[4]
@@ -1701,7 +1546,7 @@ local function newFrame(x1, y1, x2, y2)
 					local x3, y3, dX3 = map3dTo2d(polygon[7] + xCameraOffset, polygon[8] + yCameraOffset, polygon[9] + zCameraOffset)
 					if dX3 > 0.00010000001 then
 						if polygon[10] or (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2) < 0 then
-							buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(x1, y1, x2, y2, x3, y3, polygon[11], polygon[12], depth, dX1, dX2, dX3)
 						end
 					elseif clippingEnabled then
 						local function map3dTo2dFull(x, y, z)
@@ -1748,7 +1593,7 @@ local function newFrame(x1, y1, x2, y2)
 						local AY = (newPosAY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (x2 - x1) * (AY - y2) - (y2 - y1) * (AX - x2) < 0 then
-							buff:drawTriangle(x1, y1, x2, y2, AX, AY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(x1, y1, x2, y2, AX, AY, polygon[11], polygon[12], depth, dX1, dX2, 0.0001)
 
 							local w2 = abs(dX2 - 0.0001)
 							local wT = w2 + w3
@@ -1757,7 +1602,7 @@ local function newFrame(x1, y1, x2, y2)
 
 							local BX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 							local BY = (newPosAY * 10000) * sYFactor + renderOffsetY
-							buff:drawTriangle(BX, BY, x2, y2, AX, AY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(BX, BY, x2, y2, AX, AY, polygon[11], polygon[12], depth, 0.0001, dX2, 0.0001)
 						end
 					end
 				elseif clippingEnabled then
@@ -1806,7 +1651,7 @@ local function newFrame(x1, y1, x2, y2)
 						local AY = (newPosAY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (AX - x1) * (y3 - AY) - (AY - y1) * (x3 - AX) < 0 then
-							buff:drawTriangle(x1, y1, AX, AY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(x1, y1, AX, AY, x3, y3, polygon[11], polygon[12], depth, dX1, 0.0001, dX3)
 
 							local w3 = abs(dX3 - 0.0001)
 							local wT = w2 + w3
@@ -1815,7 +1660,7 @@ local function newFrame(x1, y1, x2, y2)
 
 							local BX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 							local BY = (newPosAY * 10000) * sYFactor + renderOffsetY
-							buff:drawTriangle(BX, BY, AX, AY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(BX, BY, AX, AY, x3, y3, polygon[11], polygon[12], depth, 0.0001, 0.0001, dX3)
 						end
 					else
 						-- 1 0 0
@@ -1838,7 +1683,7 @@ local function newFrame(x1, y1, x2, y2)
 						local BY = (newPosBY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (AX - x1) * (BY - AY) - (AY - y1) * (BX - AX) < 0 then
-							buff:drawTriangle(x1, y1, AX, AY, BX, BY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(x1, y1, AX, AY, BX, BY, polygon[11], polygon[12], depth, dX1, 0.0001, 0.0001)
 						end
 					end
 				end
@@ -1888,7 +1733,7 @@ local function newFrame(x1, y1, x2, y2)
 						local AX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 						local AY = (newPosAY * 10000) * sYFactor + renderOffsetY
 						if polygon[10] or (x2 - AX) * (y3 - y2) - (y2 - AY) * (x3 - x2) < 0 then
-							buff:drawTriangle(AX, AY, x2, y2, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(AX, AY, x2, y2, x3, y3, polygon[11], polygon[12], depth, 0.0001, dX2, dX3)
 
 							local w3 = abs(dX3 - 0.0001)
 							local wT = w1 + w3
@@ -1897,7 +1742,7 @@ local function newFrame(x1, y1, x2, y2)
 
 							local BX = (newPosAZ * 10000) * sXFactor + renderOffsetX
 							local BY = (newPosAY * 10000) * sYFactor + renderOffsetY
-							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], depth, 0.0001, 0.0001, dX3)
 						end
 					else
 						-- 0 1 0
@@ -1920,7 +1765,7 @@ local function newFrame(x1, y1, x2, y2)
 						local BY = (newPosBY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (x2 - AX) * (BY - y2) - (y2 - AY) * (BX - x2) < 0 then
-							buff:drawTriangle(AX, AY, x2, y2, BX, BY, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(AX, AY, x2, y2, BX, BY, polygon[11], polygon[12], depth, 0.0001, dX2, 0.0001)
 						end
 					end
 				else
@@ -1945,7 +1790,7 @@ local function newFrame(x1, y1, x2, y2)
 						local BY = (newPosBY * 10000) * sYFactor + renderOffsetY
 
 						if polygon[10] or (BX - AX) * (y3 - BY) - (BY - AY) * (x3 - BX) < 0 then
-							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], polygon[13], polygon[14], depth)
+							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], depth, 0.0001, 0.0001, dX3)
 						end
 					--else
 						-- 0 0 0
@@ -2003,6 +1848,7 @@ local function newFrame(x1, y1, x2, y2)
 				camera.rotY and rad(camera.rotY) or self.camera[5] or 0,
 				camera.rotZ and rad(camera.rotZ) or self.camera[6] or 0,
 				self.camera[7],
+				self.camera[8],
 			}
 		else
 			---@class CollapsedCamera
@@ -2014,6 +1860,7 @@ local function newFrame(x1, y1, x2, y2)
 				rotY and rad(rotY) or self.camera[5] or 0,
 				rotZ and rad(rotZ) or self.camera[6] or 0,
 				self.camera[7],
+				self.camera[8],
 			}
 		end
 		if self.camera[4] == math.pi*0.5 then
@@ -2028,6 +1875,7 @@ local function newFrame(x1, y1, x2, y2)
 		self.t = tan(rad(self.FoV / 2)) * 2 * 0.0001
 		updateMappingConstants()
 		self.camera[7] = rad(self.FoV)
+		self.camera[8] = 2 * math.atan(math.tan(rad(self.FoV) * 0.5) / (self.width / self.height / 1.5))
 	end
 
 	---If set to true, edges of triangles are colored differently to show the wireframe (useful for debugging)
@@ -2058,16 +1906,13 @@ local function newFrame(x1, y1, x2, y2)
 
 		local y = y - 1
 
-		local selfBlittleOn = self.blittleOn
 		local selfX1 = self.x1
 		local selfY1 = self.y1
 		local selfX2 = self.x2
 		local selfY2 = self.y2
 
-		if selfBlittleOn then
-			x = x * 2
-			y = y * 3 + 1
-		end
+		x = x * 2
+		y = y * 3 + 1
 
 		local camera = self.camera
 
@@ -2096,10 +1941,10 @@ local function newFrame(x1, y1, x2, y2)
 			if (rotX and rotX ~= 0) or (rotY and rotY ~= 0) or (rotZ and rotZ ~= 0) then
 				model = rotateCollapsedModel(model, rotX, rotY, rotZ)
 			end
-
 			local oX = object[1]
 			local oY = object[2]
 			local oZ = object[3]
+			computePolyCamDistance(model, oX, oY, oZ, camera)
 
 			local renderOffsetX = renderOffsetX
 			local renderOffsetY = renderOffsetY
@@ -2159,14 +2004,8 @@ local function newFrame(x1, y1, x2, y2)
 
 								local depth = avgX*avgX + avgY*avgY + avgZ*avgZ -- relative distance
 
-								if not selfBlittleOn then
-									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, selfX1, selfY1, selfX2, selfY2) then
-										solutions[#solutions+1] = {objectIndex = i, polygonIndex = j, depth = depth}
-									end
-								else
-									if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, (selfX2 - 1) * 2 + 1, (selfY1 - 1) * 3 + 1, (selfX2) * 2, (selfY2 + 1) * 3) then
-										solutions[#solutions+1] = {objectIndex = i, polygonIndex = j, depth = depth}
-									end
+								if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, (selfX2 - 1) * 2 + 1, (selfY1 - 1) * 3 + 1, (selfX2) * 2, (selfY2 + 1) * 3) then
+									solutions[#solutions+1] = {objectIndex = i, polygonIndex = j, depth = depth}
 								end
 							end
 						end
@@ -2278,8 +2117,12 @@ local function newFrame(x1, y1, x2, y2)
 		return object
 	end
 
+	frame:depthInterpolation(true)
+
+	frame.width = (frame.x2 - frame.x1 + 1) * 2
+	frame.height = (frame.y2 - frame.y1 + 1) * 3
+	frame.buffer:setBufferSize(frame.x1, frame.y1, frame.x1 + frame.width - 1, frame.y1 + frame.height - 1)
 	updateMappingConstants()
-	frame:highResMode(true)
 
 	return frame
 end
@@ -2623,8 +2466,6 @@ return {
 	newFrame = newFrame,
 	loadModel = loadModel,
 	newBuffer = newBuffer,
-	-- newLoDManager = newLoDManager,
-	linear = linear,
 	models = models,
 	transforms = transforms,
 }
