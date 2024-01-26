@@ -1,7 +1,5 @@
 
--- Made by Xella (not all of it)
--- Lookup table and "magicLookup" function by HaruCoded <3
--- Works like magic :3
+-- Made by Xella
 
 local floor = math.floor
 local concat = table.concat
@@ -11,119 +9,73 @@ for i = 1, 16 do
 	colorChar[2 ^ (i - 1)] = ("0123456789abcdef"):sub(i, i)
 end
 
-local teletext_lookup_c1 = {}
-local teletext_lookup_c2 = {}
-local teletext_lookup_c3 = {}
-for i=0,46656 do
-	local p1, p2, p3, p4, p5, p6 =
-		5 - math.floor(i / (6 ^ 0)) % 6,
-		5 - math.floor(i / (6 ^ 1)) % 6,
-		5 - math.floor(i / (6 ^ 2)) % 6,
-		5 - math.floor(i / (6 ^ 3)) % 6,
-		5 - math.floor(i / (6 ^ 4)) % 6,
-		5 - math.floor(i / (6 ^ 5)) % 6
+local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
+	local freq = {}
+	freq[p1] = 1
+	freq[p2] = (freq[p2] or 0) + 1
+	freq[p3] = (freq[p3] or 0) + 1
+	freq[p4] = (freq[p4] or 0) + 1
+	freq[p5] = (freq[p5] or 0) + 1
+	freq[p6] = (freq[p6] or 0) + 1
 
-	local lookup = {}
-	lookup[p6] = 5
-	lookup[p5] = 4
-	lookup[p4] = 3
-	lookup[p3] = 2
-	lookup[p2] = 1
-	lookup[p1] = 0
-
-	local id =
-		lookup[p2] +
-		lookup[p3] * 3 +
-		lookup[p4] * 4 +
-		lookup[p5] * 20 +
-		lookup[p6] * 100
-
-	if teletext_lookup_c1[id] == nil then
-		-- Calculate the colors
-		local freq = {}
-		freq[p1] = 1
-		freq[p2] = (freq[p2] or 0) + 1
-		freq[p3] = (freq[p3] or 0) + 1
-		freq[p4] = (freq[p4] or 0) + 1
-		freq[p5] = (freq[p5] or 0) + 1
-		freq[p6] = (freq[p6] or 0) + 1
-
-		-- Calculate the most frequent color
-		local A, A_C = p1, 0
-		local B, B_C = p1, 0
-		for color, count in pairs(freq) do
-			if count > B_C then
-				if count > A_C then
-					B = A
-					B_C = A_C
-					A = color
-					A_C = count
-				else
-					B = color
-					B_C = count
-				end
+	local highest = p1
+	local highestCount = 0
+	local secondHighest = p1
+	local secondHighestCount = 0
+	for color, count in pairs(freq) do
+		if count > secondHighestCount then
+			if count > highestCount then
+				secondHighest = highest
+				secondHighestCount = highestCount
+				highest = color
+				highestCount = count
+			else
+				secondHighest = color
+				secondHighestCount = count
 			end
 		end
-
-		local mask = 0
-		if p1 == A then mask = mask +  1 end
-		if p2 == A then mask = mask +  2 end
-		if p3 == A then mask = mask +  4 end
-		if p4 == A then mask = mask +  8 end
-		if p5 == A then mask = mask + 16 end
-		if p6 == A then mask = mask + 32 end
-
-		A = lookup[A] + 1
-		B = lookup[B] + 1
-
-		local mask_f = bit32.bxor(mask, 63)
-		if mask > mask_f then
-			teletext_lookup_c1[id] = B
-			teletext_lookup_c2[id] = A
-			teletext_lookup_c3[id] = string.char(128 + mask_f)
-		else
-			teletext_lookup_c1[id] = A
-			teletext_lookup_c2[id] = B
-			teletext_lookup_c3[id] = string.char(128 + mask)
-		end
 	end
+
+	return highest, secondHighest
 end
 
-local lookup = {}
-local teletext_part = { 0, 0, 0, 0, 0, 0 }
-local function magicLookup(p1, p2, p3, p4, p5, p6)
-	teletext_part[1] = p1
-	teletext_part[2] = p2
-	teletext_part[3] = p3
-	teletext_part[4] = p4
-	teletext_part[5] = p5
-	teletext_part[6] = p6
+local relationsBlittle = {[0] = {8, 4, 3, 6, 5}, {4, 14, 8, 7}, {6, 10, 8, 7}, {9, 11, 8, 0}, {1, 14, 8, 0}, {13, 12, 8, 0}, {2, 10, 8, 0}, {15, 8, 10, 11, 12, 14}, {0, 7, 1, 9, 2, 13}, {3, 11, 8, 7}, {2, 6, 7, 15}, {9, 3, 7, 15}, {13, 5, 7, 15}, {5, 12, 8, 7}, {1, 4, 7, 15}, {7, 10, 11, 12, 14}}
+local relations = {}
+for i = 0, 15 do
+	local r = relationsBlittle[i]
+	for i = 1, #r do
+		r[i] = math.pow(2, r[i])
+	end
+	relations[math.pow(2, i)] = r
+end
+local function colorCloser(target, c1, c2)
+	local r = relations[target]
+	for i = 1, #r do
+		if r[i] == c1 then return true
+		elseif r[i] == c2 then return false end
+	end
 
-	lookup[p6] = 5
-	lookup[p5] = 4
-	lookup[p4] = 3
-	lookup[p3] = 2
-	lookup[p2] = 1
-	lookup[p1] = 0
+	return false
+end
 
-	local id =
-		lookup[p2] +
-		lookup[p3] * 3 +
-		lookup[p4] * 4 +
-		lookup[p5] * 20 +
-		lookup[p6] * 100
-
-	lookup[p1] = nil
-	lookup[p2] = nil
-	lookup[p3] = nil
-	lookup[p4] = nil
-	lookup[p5] = nil
-	lookup[p6] = nil
-
-	local fg = teletext_lookup_c1[id]
-	local bg = teletext_lookup_c2[id]
-	local cc = teletext_lookup_c3[id]
-	return teletext_part[fg], teletext_part[bg], cc
+local char = string.char
+local allChars = {}
+for i = 128, 128+31 do
+	allChars[i] = char(i)
+end
+local bxor = bit.bxor
+local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
+	local cc = colorCloser
+	local charNr = 128
+	if p1 == c1 or p1 ~= c2 and cc(p1, c1, c2) then charNr = charNr + 1 end
+	if p2 == c1 or p2 ~= c2 and cc(p2, c1, c2) then charNr = charNr + 2 end
+	if p3 == c1 or p3 ~= c2 and cc(p3, c1, c2) then charNr = charNr + 4 end
+	if p4 == c1 or p4 ~= c2 and cc(p4, c1, c2) then charNr = charNr + 8 end
+	if p5 == c1 or p5 ~= c2 and cc(p5, c1, c2) then charNr = charNr + 16 end
+	if p6 == c1 or p6 ~= c2 and cc(p6, c1, c2) then
+		return allChars[bxor(31, charNr)], true
+	end
+	return allChars[charNr], false
 end
 
 local function drawBuffer(buffer, win)
@@ -159,11 +111,19 @@ local function drawBuffer(buffer, win)
 				blitC2[x] = c
 				blitChar[x] = "\x80"
 			else
-				local c1, c2, char = magicLookup(p1, p2, p3, p4, p5, p6)
-				local cC2 = colorChar[c2]
-				local cC1 = colorChar[c1]
-				blitC1[x] = cC1
-				blitC2[x] = cC2
+				local c1, c2 = getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
+				local char, swapColors = getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
+				if swapColors then
+					local cC2 = colorChar[c2]
+					local cC1 = colorChar[c1]
+					blitC1[x] = cC2
+					blitC2[x] = cC1
+				else
+					local cC2 = colorChar[c2]
+					local cC1 = colorChar[c1]
+					blitC1[x] = cC1
+					blitC2[x] = cC2
+				end
 				blitChar[x] = char
 			end
 		end
