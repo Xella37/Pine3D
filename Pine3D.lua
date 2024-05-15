@@ -19,7 +19,8 @@ local function newBuffer(x, y, w, h)
 	local buffer = {
 		width = w * 2,
 		height = h * 3,
-		screenBuffer = {{}},
+		colorValues = {},
+		depthValues = {},
 		blitWin = window.create(term.current(), x, y, w, h, false),
 		backgroundColor = colors.lightBlue
 	}
@@ -38,61 +39,58 @@ local function newBuffer(x, y, w, h)
 
 	---Fully clear the Buffer
 	function buffer:clear()
-		local screenBuffer = self.screenBuffer
-
-		screenBuffer.c2 = {}
-		screenBuffer.depth = {}
-		local c2 = screenBuffer.c2
-		local depth = screenBuffer.depth
+		self.colorValues = {}
+		self.depthValues = {}
+		local colors = self.colorValues
+		local depths = self.depthValues
 
 		local bigNeg = math.huge
 		local width = self.width
 		local color = self.backgroundColor
 
 		for y = 1, self.height do
-			c2[y] = {}
-			depth[y] = {}
-			local c2Y = c2[y]
-			local depthY = depth[y]
+			colors[y] = {}
+			depths[y] = {}
+			local colorsY = colors[y]
+			local depthsY = depths[y]
 			for x = 1, width do
-				c2Y[x] = color
-				depthY[x] = bigNeg
+				colorsY[x] = color
+				depthsY[x] = bigNeg
 			end
 		end
 	end
 
 	function buffer:clearDepth()
-		local screenBuffer = self.screenBuffer
-		local depth = screenBuffer.depth
+		local depths = self.depthValues
 
 		local bigNeg = -math.huge
 		local width = self.width
 
 		for y = 1, self.height do
-			local depthY = depth[y]
+			local depthsY = depths[y]
 			for x = 1, width do
-				depthY[x] = bigNeg
+				depthsY[x] = bigNeg
 			end
 		end
 	end
 
 	---Clear the Buffer quickly
 	function buffer:fastClear()
-		local c = self.backgroundColor
-		local c2 = self.screenBuffer.c2
+		local bgColor = self.backgroundColor
+		local colors = self.colorValues
 
 		local width = self.width
 		for y = 1, self.height do
-			local c2Y = c2[y]
+			local colorsY = colors[y]
 			for x = 1, width do
-				c2Y[x] = c
+				colorsY[x] = bgColor
 			end
 		end
 	end
 
 	---Set the color of an individual pixel
-	---@param x integer teletext pixel x coordinate
-	---@param y integer teletext pixel y coordinate
+	---@param x number teletext pixel x coordinate
+	---@param y number teletext pixel y coordinate
 	---@param c integer color for the pixel
 	function buffer:setPixel(x, y, c)
 		x = floor(x + 0.5)
@@ -100,8 +98,7 @@ local function newBuffer(x, y, w, h)
 
 		if x >= 1 and x <= self.width then
 			if y >= 1 and y <= self.height then
-				local screenBuffer = self.screenBuffer
-				screenBuffer.c2[y][x] = c
+				self.colorValues[y][x] = c
 			end
 		end
 	end
@@ -112,19 +109,18 @@ local function newBuffer(x, y, w, h)
 	---@param y integer teletext pixel y coordinate
 	---@param image PaintUtilsImage can be loaded with paintutils.loadImage (from .nfp)
 	function buffer:image(x, y, image)
-		local screenBuffer = self.screenBuffer
 		local width = self.width
-		local c2 = screenBuffer.c2
+		local colors = self.colorValues
 
 		for yImage, row in pairs(image) do
 			local drawY = yImage + y
-			local c2Y = c2[drawY]
-			if c2Y then
+			local colorsY = colors[drawY]
+			if colorsY then
 				for xImage, value in pairs(row) do
 					if value and value > 0 then
 						local drawX = xImage + x
 						if drawX >= 1 and drawX <= width then
-							c2Y[drawX] = value
+							colorsY[drawX] = value
 						end
 					end
 				end
@@ -133,9 +129,8 @@ local function newBuffer(x, y, w, h)
 	end
 
 	function buffer:drawLineNoInterp(x1, y1, x2, y2, c, depthInverted)
-		local screenBuffer = self.screenBuffer
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+		local colors = self.colorValues
+		local depths = self.depthValues
 
 		local frameWidth = self.width
 		local frameHeight = self.height
@@ -147,9 +142,9 @@ local function newBuffer(x, y, w, h)
 			for x = max(ceil(min(x1, x2)), 1), min(floor(max(x1, x2)), frameWidth) do
 				local xRatio = (x - x1) / dx
 				local y = floor(y1 + xRatio * dy + 0.5)
-				if y > 0 and y <= frameHeight and depthInverted >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = depthInverted
+				if y > 0 and y <= frameHeight and depthInverted >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = depthInverted
 				end
 			end
 		end
@@ -157,18 +152,17 @@ local function newBuffer(x, y, w, h)
 			for y = max(ceil(min(y1, y2)), 1), min(floor(max(y1, y2)), frameHeight) do
 				local yRatio = (y - y1) / dy
 				local x = floor(x1 + yRatio * dx + 0.5)
-				if x > 0 and x <= frameWidth and depthInverted >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = depthInverted
+				if x > 0 and x <= frameWidth and depthInverted >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = depthInverted
 				end
 			end
 		end
 	end
 
 	function buffer:drawLineInterp(x1, y1, x2, y2, c, z1Inv, z2Inv)
-		local screenBuffer = self.screenBuffer
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+		local colors = self.colorValues
+		local depths = self.depthValues
 
 		local frameWidth = self.width
 		local frameHeight = self.height
@@ -188,9 +182,9 @@ local function newBuffer(x, y, w, h)
 
 				local y = floor(y1 + xRatio * dy + 0.5)
 				local zInv = z1Inv + xRatio * slopeZInv
-				if y > 0 and y <= frameHeight and zInv >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = zInv
+				if y > 0 and y <= frameHeight and zInv >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = zInv
 				end
 			end
 		end
@@ -200,9 +194,9 @@ local function newBuffer(x, y, w, h)
 
 				local x = floor(x1 + yRatio * dx + 0.5)
 				local zInv = z1Inv + yRatio * slopeZInv
-				if x > 0 and x <= frameWidth and zInv >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = zInv
+				if x > 0 and x <= frameWidth and zInv >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = zInv
 				end
 			end
 		end
@@ -231,8 +225,6 @@ local function newBuffer(x, y, w, h)
 			x1, x2 = x2, x1
 		end
 
-		local screenBuffer = self.screenBuffer
-
 		local floor, ceil = floor, ceil
 		local min, max = min, max
 
@@ -240,8 +232,8 @@ local function newBuffer(x, y, w, h)
 		local midY = min(max(0, floor(y2)), frameHeight)
 		local maxY = min(max(1, floor(y3)), frameHeight)
 
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+		local colors = self.colorValues
+		local depths = self.depthValues
 		local depthInverted = 1 / depth
 
 		if y1 ~= y2 and y1 ~= y3 then
@@ -259,13 +251,13 @@ local function newBuffer(x, y, w, h)
 				if xABounded < 1 then xABounded = 1 end
 				if xBBounded > frameWidth then xBBounded = frameWidth end
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 
 				for x = xABounded, xBBounded do
-					if depthInverted > depthY[x] then
-						depthY[x] = depthInverted
-						c2Y[x] = c
+					if depthInverted > depthsY[x] then
+						depthsY[x] = depthInverted
+						colorsY[x] = c
 					end
 				end
 			end
@@ -286,13 +278,13 @@ local function newBuffer(x, y, w, h)
 				if xABounded < 1 then xABounded = 1 end
 				if xBBounded > frameWidth then xBBounded = frameWidth end
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 
 				for x = xABounded, xBBounded do
-					if depthInverted > depthY[x] then
-						depthY[x] = depthInverted
-						c2Y[x] = c
+					if depthInverted > depthsY[x] then
+						depthsY[x] = depthInverted
+						colorsY[x] = c
 					end
 				end
 			end
@@ -332,8 +324,6 @@ local function newBuffer(x, y, w, h)
 			z1, z2 = z2, z1
 		end
 
-		local screenBuffer = self.screenBuffer
-
 		local floor, ceil = floor, ceil
 		local min, max = min, max
 
@@ -341,8 +331,8 @@ local function newBuffer(x, y, w, h)
 		local midY = min(max(0, floor(y2)), frameHeight)
 		local maxY = min(max(1, floor(y3)), frameHeight)
 
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+		local colors = self.colorValues
+		local depths = self.depthValues
 		local z3Inv = 1 / z3
 		local z2Inv = 1 / z2
 		local z1Inv = 1 / z1
@@ -378,16 +368,16 @@ local function newBuffer(x, y, w, h)
 				xB = floor(xB + 1.5)
 				local xLength = xB - xA
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 				local slopeZ_XInv = zBInv - zAInv
 
 				for x = xABounded, xBBounded do
 					local xRatio = (x - xA) / xLength
 					local zInv = zAInv + xRatio * slopeZ_XInv
-					if zInv > depthY[x] then
-						depthY[x] = zInv
-						c2Y[x] = c
+					if zInv > depthsY[x] then
+						depthsY[x] = zInv
+						colorsY[x] = c
 					end
 				end
 			end
@@ -425,16 +415,16 @@ local function newBuffer(x, y, w, h)
 				xB = floor(xB + 1.5)
 				local xLength = xB - xA
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 				local slopeZ_XInv = zBInv - zAInv
 
 				for x = xABounded, xBBounded do
 					local xRatio = (x - xA) / xLength
 					local zInv = zAInv + xRatio * slopeZ_XInv
-					if zInv > depthY[x] then
-						depthY[x] = zInv
-						c2Y[x] = c
+					if zInv > depthsY[x] then
+						depthsY[x] = zInv
+						colorsY[x] = c
 					end
 				end
 			end
@@ -452,7 +442,7 @@ local function newBuffer(x, y, w, h)
 
 	function buffer:drawBuffer()
 		local blitWin = self.blitWin
-		betterblittle.drawBuffer(self.screenBuffer.c2, blitWin)
+		betterblittle.drawBuffer(self.colorValues, blitWin)
 		blitWin.setVisible(true)
 		blitWin.setVisible(false)
 	end
@@ -1316,8 +1306,7 @@ local function newFrame(x, y, w, h)
 		sXFactor = 0.0001 * frame.width / frame.t
 		sYFactor = -0.0001 * frame.width / (frame.t * frame.height) * frame.height
 	end
-
-	frame:updateMappingConstants()
+	updateMappingConstants()
 
 	function frame:setSize(x, y, w, h)
 		self.width = w * 2
@@ -1332,8 +1321,6 @@ local function newFrame(x, y, w, h)
 		self.interpolateDepth = enabled
 		self.buffer:depthInterpolation(enabled)
 	end
-
-	frame:depthInterpolation(true)
 
 	function frame:map3dTo2d(x, y, z)
 		local camera = self.camera
@@ -2087,6 +2074,8 @@ local function newFrame(x, y, w, h)
 
 		return object
 	end
+
+	frame:depthInterpolation(true)
 
 	return frame
 end
