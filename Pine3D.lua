@@ -9,42 +9,30 @@ local floor = math.floor
 local ceil = math.ceil
 
 ---Creates a new Buffer for rendering triangles
----@param x1 number top-left x coordinate of the Buffer on the screen
----@param y1 number top-left y coordinate of the Buffer on the screen
----@param x2 number bottom-right x coordinate of the Buffer on the screen
----@param y2 number bottom-right y coordinate of the Buffer on the screen
+---@param x integer the new x position of the window
+---@param y integer the new y position of the window
+---@param w integer the new width of the window
+---@param h integer the new height of the window
 ---@return Buffer
-local function newBuffer(x1, y1, x2, y2)
+local function newBuffer(x, y, w, h)
 	---@class Buffer
 	local buffer = {
-		x1 = x1,
-		y1 = y1,
-		x2 = x2,
-		y2 = y2,
-		width = x2 - x1 + 1,
-		height = y2 - y1 + 1,
+		width = w * 2,
+		height = h * 3,
 		screenBuffer = {{}},
-		blitWin = window.create(term.current(), x1, y1, x2 - x1 + 1, y2 - y1 + 1, false),
+		blitWin = window.create(term.current(), x, y, w, h, false),
 		backgroundColor = colors.lightBlue
 	}
 
 	---Reposition the Buffer
-	---@param newX1 number
-	---@param newY1 number
-	---@param newX2 number
-	---@param newY2 number
-	function buffer:setBufferSize(newX1, newY1, newX2, newY2)
-		self.x1 = newX1
-		self.y1 = newY1
-
-		self.x2 = newX2
-		self.y2 = newY2
-
-		self.width = newX2 - newX1 + 1
-		self.height = newY2 - newY1 + 1
-
-		self.blitWin.reposition(self.x1, self.y1, self.width, self.height)
-
+	---@param x integer the new x position of the window
+	---@param y integer the new y position of the window
+	---@param w integer the new width of the window
+	---@param h integer the new height of the window
+	function buffer:setSize(x, y, w, h)
+		self.width = w * 2
+		self.height = h * 3
+		self.blitWin.reposition(x, y, w, h)
 		self:clear()
 	end
 
@@ -103,9 +91,9 @@ local function newBuffer(x1, y1, x2, y2)
 	end
 
 	---Set the color of an individual pixel
-	---@param x number
-	---@param y number
-	---@param c number color for the pixel
+	---@param x integer teletext pixel x coordinate
+	---@param y integer teletext pixel y coordinate
+	---@param c integer color for the pixel
 	function buffer:setPixel(x, y, c)
 		x = floor(x + 0.5)
 		y = floor(y + 0.5)
@@ -119,28 +107,22 @@ local function newBuffer(x1, y1, x2, y2)
 	end
 
 	---@alias PaintUtilsImage table
-
 	---Render an image to the Buffer at a given offset
-	---@param x number
-	---@param y number
+	---@param x integer teletext pixel x coordinate
+	---@param y integer teletext pixel y coordinate
 	---@param image PaintUtilsImage can be loaded with paintutils.loadImage (from .nfp)
-	---@param dXSub number subpixel offset when high res mode is used
-	---@param dYSub number subpixel offset when high res mode is used
-	function buffer:image(x, y, image, dXSub, dYSub)
+	function buffer:image(x, y, image)
 		local screenBuffer = self.screenBuffer
 		local width = self.width
-
-		local dx = (floor(x + 0.5) - 1) * 2 + (dXSub or 0)
-		local dy = (floor(y + 0.5) - 1) * 3 + (dYSub or 0)
 		local c2 = screenBuffer.c2
 
 		for yImage, row in pairs(image) do
-			local drawY = yImage + dy
+			local drawY = yImage + y
 			local c2Y = c2[drawY]
 			if c2Y then
 				for xImage, value in pairs(row) do
 					if value and value > 0 then
-						local drawX = xImage + dx
+						local drawX = xImage + x
 						if drawX >= 1 and drawX <= width then
 							c2Y[drawX] = value
 						end
@@ -150,7 +132,7 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
-	function buffer:loadLineNoInterp(x1, y1, x2, y2, c, depthInverted)
+	function buffer:drawLineNoInterp(x1, y1, x2, y2, c, depthInverted)
 		local screenBuffer = self.screenBuffer
 		local c2 = screenBuffer.c2
 		local depthBuffer = screenBuffer.depth
@@ -183,7 +165,7 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
-	function buffer:loadLineInterp(x1, y1, x2, y2, c, z1Inv, z2Inv)
+	function buffer:drawLineInterp(x1, y1, x2, y2, c, z1Inv, z2Inv)
 		local screenBuffer = self.screenBuffer
 		local c2 = screenBuffer.c2
 		local depthBuffer = screenBuffer.depth
@@ -318,7 +300,7 @@ local function newBuffer(x1, y1, x2, y2)
 
 		local outlineColor = outlineColor
 		if outlineColor or self.triangleEdges then
-			local loadLine = self.loadLineNoInterp
+			local loadLine = self.drawLineNoInterp
 			local c = outlineColor or defaultOutlineColor
 			loadLine(self, x1, y1, x2, y2, c, depthInverted)
 			loadLine(self, x2, y2, x3, y3, c, depthInverted)
@@ -460,7 +442,7 @@ local function newBuffer(x1, y1, x2, y2)
 
 		local outlineColor = outlineColor
 		if outlineColor or self.triangleEdges then
-			local loadLine = self.loadLineInterp
+			local loadLine = self.drawLineInterp
 			local c = outlineColor or defaultOutlineColor
 			loadLine(self, x1, y1, x2, y2, c, z1Inv, z2Inv)
 			loadLine(self, x2, y2, x3, y3, c, z2Inv, z3Inv)
@@ -1189,7 +1171,7 @@ function transforms.toLoD(model, settings)
 			local d = (dx * dx + dy * dy + dz * dz) ^ 0.5
 			local targetQuality = math.min(1, math.max(LoDModel.minQuality, 1 / (d / LoDModel.qualityHalvingDistance)))
 			local closestRaw = (LoDModel.variantCount + 1) -
-			LoDModel.variantCount * (targetQuality - LoDModel.minQuality) / (1 - LoDModel.minQuality)
+				LoDModel.variantCount * (targetQuality - LoDModel.minQuality) / (1 - LoDModel.minQuality)
 			local closest = math.floor(closestRaw + 0.5)
 
 			local var = variants[closest]
@@ -1286,43 +1268,32 @@ local tan = math.tan
 local sqrt = math.sqrt
 
 ---Creates a new ThreeDFrame
----@param x1 number? top-left x coordinate of the ThreeDFrame on the screen
----@param y1 number? top-left y coordinate of the ThreeDFrame on the screen
----@param x2 number? bottom-right x coordinate of the ThreeDFrame on the screen
----@param y2 number? bottom-right y coordinate of the ThreeDFrame on the screen
+---@param x integer the new x position of the ThreeDFrame on the screen
+---@param y integer the new y position of the ThreeDFrame on the screen
+---@param w integer the new width of the ThreeDFrame on the screen
+---@param h integer the new height of the ThreeDFrame on the screen
 ---@return ThreeDFrame
-local function newFrame(x1, y1, x2, y2)
-	local width, height = term.getSize()
-	if x1 and x2 then
-		width = x2 - x1 + 1
-	end
-	if y1 and y2 then
-		height = y2 - y1 + 1
-	end
-
-	local x1 = x1 or 1
-	local y1 = y1 or 1
-	local x2 = x2 or (width - x1 + 1)
-	local y2 = y2 or (height - y1 + 1)
+local function newFrame(x, y, w, h)
+	local term_width, term_height = term.getSize()
+	x = x or 1
+	y = y or 1
+	w = w or term_width
+	h = h or term_height
 
 	---@class ThreeDFrame
 	local frame = {
 		---@class CollapsedCamera
 		camera = {
-			0.000001,
-			0.000001,
-			0.000001,
+			0,
+			0,
+			0,
 			nil,
 			0,
 			0,
 		},
-		buffer = newBuffer(x1, y1, x2, y2),
-		x1 = x1,
-		y1 = y1,
-		x2 = x2,
-		y2 = y2,
-		width = width,
-		height = height,
+		buffer = newBuffer(x, y, w, h),
+		width = w * 2,
+		height = h * 3,
 	}
 	frame.FoV = 90
 	frame.camera[7] = rad(frame.FoV)
@@ -1346,15 +1317,12 @@ local function newFrame(x1, y1, x2, y2)
 		sYFactor = -0.0001 * frame.width / (frame.t * frame.height) * frame.height
 	end
 
-	function frame:setSize(x1, y1, x2, y2)
-		self.x1 = x1
-		self.y1 = y1
-		self.x2 = x2
-		self.y2 = y2
+	frame:updateMappingConstants()
 
-		self.width = (x2 - x1 + 1) * 2
-		self.height = (y2 - y1 + 1) * 3
-		self.buffer:setBufferSize(x1, y1, x1 + self.width - 1, y1 + self.height - 1)
+	function frame:setSize(x, y, w, h)
+		self.width = w * 2
+		self.height = h * 3
+		self.buffer:setSize(x, y, w, h)
 		updateMappingConstants()
 	end
 
@@ -1364,6 +1332,8 @@ local function newFrame(x1, y1, x2, y2)
 		self.interpolateDepth = enabled
 		self.buffer:depthInterpolation(enabled)
 	end
+
+	frame:depthInterpolation(true)
 
 	function frame:map3dTo2d(x, y, z)
 		local camera = self.camera
@@ -1479,7 +1449,7 @@ local function newFrame(x1, y1, x2, y2)
 		computePolyCamDistance(model, oX, oY, oZ, camera)
 
 		local clippingEnabled = xCameraOffset * xCameraOffset + yCameraOffset * yCameraOffset + zCameraOffset * zCameraOffset <
-		modelSize * modelSize * 4
+			modelSize * modelSize * 4
 
 		local renderOffsetX = renderOffsetX
 		local renderOffsetY = renderOffsetY
@@ -2117,13 +2087,6 @@ local function newFrame(x1, y1, x2, y2)
 
 		return object
 	end
-
-	frame:depthInterpolation(true)
-
-	frame.width = (frame.x2 - frame.x1 + 1) * 2
-	frame.height = (frame.y2 - frame.y1 + 1) * 3
-	frame.buffer:setBufferSize(frame.x1, frame.y1, frame.x1 + frame.width - 1, frame.y1 + frame.height - 1)
-	updateMappingConstants()
 
 	return frame
 end
