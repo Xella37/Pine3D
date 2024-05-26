@@ -1258,10 +1258,10 @@ local tan = math.tan
 local sqrt = math.sqrt
 
 ---Creates a new ThreeDFrame
----@param x integer the new x position of the ThreeDFrame on the screen
----@param y integer the new y position of the ThreeDFrame on the screen
----@param w integer the new width of the ThreeDFrame on the screen
----@param h integer the new height of the ThreeDFrame on the screen
+---@param x integer? the new x position of the ThreeDFrame on the screen
+---@param y integer? the new y position of the ThreeDFrame on the screen
+---@param w integer? the new width of the ThreeDFrame on the screen
+---@param h integer? the new height of the ThreeDFrame on the screen
 ---@return ThreeDFrame
 local function newFrame(x, y, w, h)
 	local term_width, term_height = term.getSize()
