@@ -1,4 +1,3 @@
-
 -- Made by Xella#8655
 
 local libFolder = (...):match("(.-)[^%.]+$")
@@ -10,140 +9,118 @@ local floor = math.floor
 local ceil = math.ceil
 
 ---Creates a new Buffer for rendering triangles
----@param x1 number top-left x coordinate of the Buffer on the screen
----@param y1 number top-left y coordinate of the Buffer on the screen
----@param x2 number bottom-right x coordinate of the Buffer on the screen
----@param y2 number bottom-right y coordinate of the Buffer on the screen
+---@param x integer the new x position of the window
+---@param y integer the new y position of the window
+---@param w integer the new width of the window
+---@param h integer the new height of the window
 ---@return Buffer
-local function newBuffer(x1, y1, x2, y2)
+local function newBuffer(x, y, w, h)
 	---@class Buffer
 	local buffer = {
-		x1 = x1,
-		y1 = y1,
-		x2 = x2,
-		y2 = y2,
-		width = x2 - x1 + 1,
-		height = y2 - y1 + 1,
-		screenBuffer = {{}},
-		blitWin = window.create(term.current(), x1, y1, x2 - x1 + 1, y2 - y1 + 1, false),
+		width = w * 2,
+		height = h * 3,
+		colorValues = {},
+		depthValues = {},
+		blitWin = window.create(term.current(), x, y, w, h, false),
 		backgroundColor = colors.lightBlue
 	}
 
 	---Reposition the Buffer
-	---@param newX1 number
-	---@param newY1 number
-	---@param newX2 number
-	---@param newY2 number
-	function buffer:setBufferSize(newX1, newY1, newX2, newY2)
-		self.x1 = newX1
-		self.y1 = newY1
-
-		self.x2 = newX2
-		self.y2 = newY2
-
-		self.width = newX2 - newX1 + 1
-		self.height = newY2 - newY1 + 1
-
-		self.blitWin.reposition(self.x1, self.y1, self.width, self.height)
-
+	---@param x integer the new x position of the window
+	---@param y integer the new y position of the window
+	---@param w integer the new width of the window
+	---@param h integer the new height of the window
+	function buffer:setSize(x, y, w, h)
+		self.width = w * 2
+		self.height = h * 3
+		self.blitWin.reposition(x, y, w, h)
 		self:clear()
 	end
 
 	---Fully clear the Buffer
 	function buffer:clear()
-		local screenBuffer = self.screenBuffer
-
-		screenBuffer.c2 = {}
-		screenBuffer.depth = {}
-		local c2 = screenBuffer.c2
-		local depth = screenBuffer.depth
+		self.colorValues = {}
+		self.depthValues = {}
+		local colors = self.colorValues
+		local depths = self.depthValues
 
 		local bigNeg = math.huge
 		local width = self.width
 		local color = self.backgroundColor
 
 		for y = 1, self.height do
-			c2[y] = {}
-			depth[y] = {}
-			local c2Y = c2[y]
-			local depthY = depth[y]
+			colors[y] = {}
+			depths[y] = {}
+			local colorsY = colors[y]
+			local depthsY = depths[y]
 			for x = 1, width do
-				c2Y[x] = color
-				depthY[x] = bigNeg
+				colorsY[x] = color
+				depthsY[x] = bigNeg
 			end
 		end
 	end
 
 	function buffer:clearDepth()
-		local screenBuffer = self.screenBuffer
-		local depth = screenBuffer.depth
+		local depths = self.depthValues
 
 		local bigNeg = -math.huge
 		local width = self.width
 
 		for y = 1, self.height do
-			local depthY = depth[y]
+			local depthsY = depths[y]
 			for x = 1, width do
-				depthY[x] = bigNeg
+				depthsY[x] = bigNeg
 			end
 		end
 	end
 
 	---Clear the Buffer quickly
 	function buffer:fastClear()
-		local c = self.backgroundColor
-		local c2 = self.screenBuffer.c2
+		local bgColor = self.backgroundColor
+		local colors = self.colorValues
 
 		local width = self.width
 		for y = 1, self.height do
-			local c2Y = c2[y]
+			local colorsY = colors[y]
 			for x = 1, width do
-				c2Y[x] = c
+				colorsY[x] = bgColor
 			end
 		end
 	end
 
 	---Set the color of an individual pixel
-	---@param x number
-	---@param y number
-	---@param c number color for the pixel
+	---@param x number teletext pixel x coordinate
+	---@param y number teletext pixel y coordinate
+	---@param c integer color for the pixel
 	function buffer:setPixel(x, y, c)
-		x = floor(x+0.5)
-		y = floor(y+0.5)
+		x = floor(x + 0.5)
+		y = floor(y + 0.5)
 
 		if x >= 1 and x <= self.width then
 			if y >= 1 and y <= self.height then
-				local screenBuffer = self.screenBuffer
-				screenBuffer.c2[y][x] = c
+				self.colorValues[y][x] = c
 			end
 		end
 	end
 
 	---@alias PaintUtilsImage table
-
 	---Render an image to the Buffer at a given offset
-	---@param x number
-	---@param y number
+	---@param x integer teletext pixel x coordinate
+	---@param y integer teletext pixel y coordinate
 	---@param image PaintUtilsImage can be loaded with paintutils.loadImage (from .nfp)
-	---@param dXSub number subpixel offset when high res mode is used
-	---@param dYSub number subpixel offset when high res mode is used
-	function buffer:image(x, y, image, dXSub, dYSub)
-		local screenBuffer = self.screenBuffer
+	function buffer:image(x, y, image)
 		local width = self.width
-
-		local dx = (floor(x+0.5) - 1) * 2 + (dXSub or 0)
-		local dy = (floor(y+0.5) - 1) * 3 + (dYSub or 0)
-		local c2 = screenBuffer.c2
+		local colors = self.colorValues
 
 		for yImage, row in pairs(image) do
-			local drawY = yImage + dy
-			local c2Y = c2[drawY]
-			if c2Y then
+			local drawY = yImage + y
+			local colorsY = colors[drawY]
+			if colorsY then
 				for xImage, value in pairs(row) do
 					if value and value > 0 then
-						local drawX = xImage + dx
+						local drawX = xImage + x
 						if drawX >= 1 and drawX <= width then
-							c2Y[drawX] = value
+							colorsY[drawX] = value
 						end
 					end
 				end
@@ -151,10 +128,9 @@ local function newBuffer(x1, y1, x2, y2)
 		end
 	end
 
-	function buffer:loadLineNoInterp(x1, y1, x2, y2, c, depthInverted)
-		local screenBuffer = self.screenBuffer
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+	function buffer:drawLineNoInterp(x1, y1, x2, y2, c, depthInverted)
+		local colors = self.colorValues
+		local depths = self.depthValues
 
 		local frameWidth = self.width
 		local frameHeight = self.height
@@ -166,9 +142,9 @@ local function newBuffer(x1, y1, x2, y2)
 			for x = max(ceil(min(x1, x2)), 1), min(floor(max(x1, x2)), frameWidth) do
 				local xRatio = (x - x1) / dx
 				local y = floor(y1 + xRatio * dy + 0.5)
-				if y > 0 and y <= frameHeight and depthInverted >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = depthInverted
+				if y > 0 and y <= frameHeight and depthInverted >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = depthInverted
 				end
 			end
 		end
@@ -176,18 +152,17 @@ local function newBuffer(x1, y1, x2, y2)
 			for y = max(ceil(min(y1, y2)), 1), min(floor(max(y1, y2)), frameHeight) do
 				local yRatio = (y - y1) / dy
 				local x = floor(x1 + yRatio * dx + 0.5)
-				if x > 0 and x <= frameWidth and depthInverted >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = depthInverted
+				if x > 0 and x <= frameWidth and depthInverted >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = depthInverted
 				end
 			end
 		end
 	end
 
-	function buffer:loadLineInterp(x1, y1, x2, y2, c, z1Inv, z2Inv)
-		local screenBuffer = self.screenBuffer
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+	function buffer:drawLineInterp(x1, y1, x2, y2, c, z1Inv, z2Inv)
+		local colors = self.colorValues
+		local depths = self.depthValues
 
 		local frameWidth = self.width
 		local frameHeight = self.height
@@ -207,9 +182,9 @@ local function newBuffer(x1, y1, x2, y2)
 
 				local y = floor(y1 + xRatio * dy + 0.5)
 				local zInv = z1Inv + xRatio * slopeZInv
-				if y > 0 and y <= frameHeight and zInv >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = zInv
+				if y > 0 and y <= frameHeight and zInv >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = zInv
 				end
 			end
 		end
@@ -219,9 +194,9 @@ local function newBuffer(x1, y1, x2, y2)
 
 				local x = floor(x1 + yRatio * dx + 0.5)
 				local zInv = z1Inv + yRatio * slopeZInv
-				if x > 0 and x <= frameWidth and zInv >= depthBuffer[y][x] then
-					c2[y][x] = c
-					depthBuffer[y][x] = zInv
+				if x > 0 and x <= frameWidth and zInv >= depths[y][x] then
+					colors[y][x] = c
+					depths[y][x] = zInv
 				end
 			end
 		end
@@ -250,8 +225,6 @@ local function newBuffer(x1, y1, x2, y2)
 			x1, x2 = x2, x1
 		end
 
-		local screenBuffer = self.screenBuffer
-
 		local floor, ceil = floor, ceil
 		local min, max = min, max
 
@@ -259,8 +232,8 @@ local function newBuffer(x1, y1, x2, y2)
 		local midY = min(max(0, floor(y2)), frameHeight)
 		local maxY = min(max(1, floor(y3)), frameHeight)
 
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+		local colors = self.colorValues
+		local depths = self.depthValues
 		local depthInverted = 1 / depth
 
 		if y1 ~= y2 and y1 ~= y3 then
@@ -273,18 +246,18 @@ local function newBuffer(x1, y1, x2, y2)
 				local xB = x1 + dy * slopeX_YB
 				if xB < xA then xA, xB = xB, xA end
 
-				local xABounded = floor(xA+0.5)
-				local xBBounded = floor(xB+0.5)
+				local xABounded = floor(xA + 0.5)
+				local xBBounded = floor(xB + 0.5)
 				if xABounded < 1 then xABounded = 1 end
 				if xBBounded > frameWidth then xBBounded = frameWidth end
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 
 				for x = xABounded, xBBounded do
-					if depthInverted > depthY[x] then
-						depthY[x] = depthInverted
-						c2Y[x] = c
+					if depthInverted > depthsY[x] then
+						depthsY[x] = depthInverted
+						colorsY[x] = c
 					end
 				end
 			end
@@ -294,24 +267,24 @@ local function newBuffer(x1, y1, x2, y2)
 			local slopeX_YA = (x2 - x3) / (y2 - y3)
 			local slopeX_YB = (x1 - x3) / (y1 - y3)
 
-			for y = midY+1, maxY do
+			for y = midY + 1, maxY do
 				local dy = y - y3
 				local xA = x3 + dy * slopeX_YA
 				local xB = x3 + dy * slopeX_YB
 				if xB < xA then xA, xB = xB, xA end
 
-				local xABounded = floor(xA+0.5)
-				local xBBounded = floor(xB+0.5)
+				local xABounded = floor(xA + 0.5)
+				local xBBounded = floor(xB + 0.5)
 				if xABounded < 1 then xABounded = 1 end
 				if xBBounded > frameWidth then xBBounded = frameWidth end
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 
 				for x = xABounded, xBBounded do
-					if depthInverted > depthY[x] then
-						depthY[x] = depthInverted
-						c2Y[x] = c
+					if depthInverted > depthsY[x] then
+						depthsY[x] = depthInverted
+						colorsY[x] = c
 					end
 				end
 			end
@@ -319,7 +292,7 @@ local function newBuffer(x1, y1, x2, y2)
 
 		local outlineColor = outlineColor
 		if outlineColor or self.triangleEdges then
-			local loadLine = self.loadLineNoInterp
+			local loadLine = self.drawLineNoInterp
 			local c = outlineColor or defaultOutlineColor
 			loadLine(self, x1, y1, x2, y2, c, depthInverted)
 			loadLine(self, x2, y2, x3, y3, c, depthInverted)
@@ -351,8 +324,6 @@ local function newBuffer(x1, y1, x2, y2)
 			z1, z2 = z2, z1
 		end
 
-		local screenBuffer = self.screenBuffer
-
 		local floor, ceil = floor, ceil
 		local min, max = min, max
 
@@ -360,8 +331,8 @@ local function newBuffer(x1, y1, x2, y2)
 		local midY = min(max(0, floor(y2)), frameHeight)
 		local maxY = min(max(1, floor(y3)), frameHeight)
 
-		local c2 = screenBuffer.c2
-		local depthBuffer = screenBuffer.depth
+		local colors = self.colorValues
+		local depths = self.depthValues
 		local z3Inv = 1 / z3
 		local z2Inv = 1 / z2
 		local z1Inv = 1 / z1
@@ -397,16 +368,16 @@ local function newBuffer(x1, y1, x2, y2)
 				xB = floor(xB + 1.5)
 				local xLength = xB - xA
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 				local slopeZ_XInv = zBInv - zAInv
 
 				for x = xABounded, xBBounded do
 					local xRatio = (x - xA) / xLength
 					local zInv = zAInv + xRatio * slopeZ_XInv
-					if zInv > depthY[x] then
-						depthY[x] = zInv
-						c2Y[x] = c
+					if zInv > depthsY[x] then
+						depthsY[x] = zInv
+						colorsY[x] = c
 					end
 				end
 			end
@@ -421,7 +392,7 @@ local function newBuffer(x1, y1, x2, y2)
 			local slopeZ_YAInv = z2Inv - z3Inv
 			local slopeZ_YBInv = z1Inv - z3Inv
 
-			for y = midY+1, maxY do
+			for y = midY + 1, maxY do
 				local dy = y - y3
 				local xA = x3 + dy * slopeX_YA
 				local xB = x3 + dy * slopeX_YB
@@ -444,16 +415,16 @@ local function newBuffer(x1, y1, x2, y2)
 				xB = floor(xB + 1.5)
 				local xLength = xB - xA
 
-				local c2Y = c2[y]
-				local depthY = depthBuffer[y]
+				local colorsY = colors[y]
+				local depthsY = depths[y]
 				local slopeZ_XInv = zBInv - zAInv
 
 				for x = xABounded, xBBounded do
 					local xRatio = (x - xA) / xLength
 					local zInv = zAInv + xRatio * slopeZ_XInv
-					if zInv > depthY[x] then
-						depthY[x] = zInv
-						c2Y[x] = c
+					if zInv > depthsY[x] then
+						depthsY[x] = zInv
+						colorsY[x] = c
 					end
 				end
 			end
@@ -461,7 +432,7 @@ local function newBuffer(x1, y1, x2, y2)
 
 		local outlineColor = outlineColor
 		if outlineColor or self.triangleEdges then
-			local loadLine = self.loadLineInterp
+			local loadLine = self.drawLineInterp
 			local c = outlineColor or defaultOutlineColor
 			loadLine(self, x1, y1, x2, y2, c, z1Inv, z2Inv)
 			loadLine(self, x2, y2, x3, y3, c, z2Inv, z3Inv)
@@ -471,7 +442,7 @@ local function newBuffer(x1, y1, x2, y2)
 
 	function buffer:drawBuffer()
 		local blitWin = self.blitWin
-		betterblittle.drawBuffer(self.screenBuffer.c2, blitWin)
+		betterblittle.drawBuffer(self.colorValues, blitWin)
 		blitWin.setVisible(true)
 		blitWin.setVisible(false)
 	end
@@ -511,7 +482,7 @@ local function computePolyCamDistance(polygons, objectX, objectY, objectZ, camer
 		local avgY = ry + (polygon[2] + polygon[5] + polygon[8]) / 3
 		local avgZ = rz + (polygon[3] + polygon[6] + polygon[9]) / 3
 
-		polygon[16] = avgX*avgX + avgY*avgY + avgZ*avgZ -- relative distance
+		polygon[16] = avgX * avgX + avgY * avgY + avgZ * avgZ -- relative distance
 	end
 end
 
@@ -580,7 +551,7 @@ local function rotateCollapsedModel(model, rotX, rotY, rotZ)
 			x3, y3, z3 = rotatePolygonX(x3, y3, z3, rotXS, rotXC)
 		end
 
-		rotatedModel[#rotatedModel+1] = {x1, y1, z1, x2, y2, z2, x3, y3, z3}
+		rotatedModel[#rotatedModel + 1] = {x1, y1, z1, x2, y2, z2, x3, y3, z3}
 		rotatedModel[#rotatedModel][10] = polygon[10]
 		rotatedModel[#rotatedModel][11] = polygon[11]
 		rotatedModel[#rotatedModel][12] = polygon[12]
@@ -678,9 +649,9 @@ function transforms.center(model)
 		minZ, maxZ = min(minZ, poly.z3), max(maxZ, poly.z3)
 	end
 
-	local offsetX = -(maxX + minX)*0.5
-	local offsetY = -(maxY + minY)*0.5
-	local offsetZ = -(maxZ + minZ)*0.5
+	local offsetX = -(maxX + minX) * 0.5
+	local offsetY = -(maxY + minY) * 0.5
+	local offsetZ = -(maxZ + minZ) * 0.5
 
 	for i = 1, #model do
 		local poly = model[i]
@@ -900,24 +871,24 @@ function transforms.decimate(model, quality, mode)
 
 		local i1 = findVertex(poly.x1, poly.y1, poly.z1)
 		if not i1 then
-			vertices[#vertices+1] = {poly.x1, poly.y1, poly.z1}
+			vertices[#vertices + 1] = {poly.x1, poly.y1, poly.z1}
 			i1 = #vertices
 		end
 
 		local i2 = findVertex(poly.x2, poly.y2, poly.z2)
 		if not i2 then
-			vertices[#vertices+1] = {poly.x2, poly.y2, poly.z2}
+			vertices[#vertices + 1] = {poly.x2, poly.y2, poly.z2}
 			i2 = #vertices
 		end
 
 		local i3 = findVertex(poly.x3, poly.y3, poly.z3)
 		if not i3 then
-			vertices[#vertices+1] = {poly.x3, poly.y3, poly.z3}
+			vertices[#vertices + 1] = {poly.x3, poly.y3, poly.z3}
 			i3 = #vertices
 		end
 
 		local triangle = {i1, i2, i3, poly.c, poly.forceRender}
-		triangles[#triangles+1] = triangle
+		triangles[#triangles + 1] = triangle
 	end
 
 	-- actually decimate
@@ -926,7 +897,7 @@ function transforms.decimate(model, quality, mode)
 		local dx = v1[1] - v2[1]
 		local dy = v1[2] - v2[2]
 		local dz = v1[3] - v2[3]
-		return (dx*dx + dy*dy + dz*dz)^0.5
+		return (dx * dx + dy * dy + dz * dz) ^ 0.5
 	end
 
 	---@class EdgeCandidate
@@ -951,19 +922,19 @@ function transforms.decimate(model, quality, mode)
 			vertices[triangle[3]]
 		)
 
-		candidateEdges[#candidateEdges+1] = {
+		candidateEdges[#candidateEdges + 1] = {
 			length = edge1Length,
 			vA = triangle[1],
 			vB = triangle[2],
 		}
 
-		candidateEdges[#candidateEdges+1] = {
+		candidateEdges[#candidateEdges + 1] = {
 			length = edge2Length,
 			vA = triangle[2],
 			vB = triangle[3],
 		}
 
-		candidateEdges[#candidateEdges+1] = {
+		candidateEdges[#candidateEdges + 1] = {
 			length = edge3Length,
 			vA = triangle[1],
 			vB = triangle[3],
@@ -974,11 +945,11 @@ function transforms.decimate(model, quality, mode)
 		local vertex1 = vertices[vA]
 		local vertex2 = vertices[vB]
 		local vertexNew = { -- TODO: Maybe don't use average position, but offset in a smart way?
-			(vertex1[1] + vertex2[1])*0.5,
-			(vertex1[2] + vertex2[2])*0.5,
-			(vertex1[3] + vertex2[3])*0.5,
+			(vertex1[1] + vertex2[1]) * 0.5,
+			(vertex1[2] + vertex2[2]) * 0.5,
+			(vertex1[3] + vertex2[3]) * 0.5,
 		}
-		vertices[#vertices+1] = vertexNew
+		vertices[#vertices + 1] = vertexNew
 		local vNew = #vertices
 
 		for i = #triangles, 1, -1 do
@@ -1051,7 +1022,7 @@ function transforms.decimate(model, quality, mode)
 		local v2 = vertices[triangle[2]]
 		local v3 = vertices[triangle[3]]
 
-		newModel[#newModel+1] = {
+		newModel[#newModel + 1] = {
 			x1 = v1[1],
 			y1 = v1[2],
 			z1 = v1[3],
@@ -1106,7 +1077,7 @@ function transforms.toLoD(model, settings)
 	for i = 1, LoDModel.variantCount do
 		local quality = (1 - LoDModel.minQuality) * (1 - i / LoDModel.variantCount) + LoDModel.minQuality
 
-		local polyCount = math.floor(originalPolyCount*quality + 0.5)
+		local polyCount = math.floor(originalPolyCount * quality + 0.5)
 		local decreasedQualityModel = prevQuality:decimate(polyCount, "polys")
 		local objModel, modelSize = loadModelRaw(decreasedQualityModel)
 		prevQuality = decreasedQualityModel
@@ -1118,7 +1089,7 @@ function transforms.toLoD(model, settings)
 			size = modelSize,
 		}
 
-		modelVariants[#modelVariants+1] = var
+		modelVariants[#modelVariants + 1] = var
 	end
 
 	local function copyVariants(vars)
@@ -1187,9 +1158,10 @@ function transforms.toLoD(model, settings)
 			local dx = camera[1] - object[1]
 			local dy = camera[2] - object[2]
 			local dz = camera[3] - object[3]
-			local d = (dx*dx + dy*dy + dz*dz)^0.5
-			local targetQuality = math.min(1, math.max(LoDModel.minQuality, 1 / (d/LoDModel.qualityHalvingDistance)))
-			local closestRaw = (LoDModel.variantCount + 1) - LoDModel.variantCount * (targetQuality - LoDModel.minQuality) / (1 - LoDModel.minQuality)
+			local d = (dx * dx + dy * dy + dz * dz) ^ 0.5
+			local targetQuality = math.min(1, math.max(LoDModel.minQuality, 1 / (d / LoDModel.qualityHalvingDistance)))
+			local closestRaw = (LoDModel.variantCount + 1) -
+				LoDModel.variantCount * (targetQuality - LoDModel.minQuality) / (1 - LoDModel.minQuality)
 			local closest = math.floor(closestRaw + 0.5)
 
 			local var = variants[closest]
@@ -1213,7 +1185,7 @@ function loadModelRaw(model)
 
 	for i = 1, #model do
 		local polygon = model[i]
-		transformedModel[#transformedModel+1] = {}
+		transformedModel[#transformedModel + 1] = {}
 		transformedModel[#transformedModel][1] = polygon.x1
 		transformedModel[#transformedModel][2] = polygon.y1
 		transformedModel[#transformedModel][3] = polygon.z1
@@ -1227,9 +1199,9 @@ function loadModelRaw(model)
 		transformedModel[#transformedModel][11] = polygon.c
 		transformedModel[#transformedModel][12] = polygon.outlineColor
 
-		local d1 = sqrt(polygon.x1*polygon.x1 + polygon.y1*polygon.y1 + polygon.z1*polygon.z1)
-		local d2 = sqrt(polygon.x2*polygon.x2 + polygon.y2*polygon.y2 + polygon.z2*polygon.z2)
-		local d3 = sqrt(polygon.x3*polygon.x3 + polygon.y3*polygon.y3 + polygon.z3*polygon.z3)
+		local d1 = sqrt(polygon.x1 * polygon.x1 + polygon.y1 * polygon.y1 + polygon.z1 * polygon.z1)
+		local d2 = sqrt(polygon.x2 * polygon.x2 + polygon.y2 * polygon.y2 + polygon.z2 * polygon.z2)
+		local d3 = sqrt(polygon.x3 * polygon.x3 + polygon.y3 * polygon.y3 + polygon.z3 * polygon.z3)
 
 		if d1 > biggestDistance then
 			biggestDistance = d1
@@ -1286,43 +1258,32 @@ local tan = math.tan
 local sqrt = math.sqrt
 
 ---Creates a new ThreeDFrame
----@param x1 number? top-left x coordinate of the ThreeDFrame on the screen
----@param y1 number? top-left y coordinate of the ThreeDFrame on the screen
----@param x2 number? bottom-right x coordinate of the ThreeDFrame on the screen
----@param y2 number? bottom-right y coordinate of the ThreeDFrame on the screen
+---@param x integer? the new x position of the ThreeDFrame on the screen
+---@param y integer? the new y position of the ThreeDFrame on the screen
+---@param w integer? the new width of the ThreeDFrame on the screen
+---@param h integer? the new height of the ThreeDFrame on the screen
 ---@return ThreeDFrame
-local function newFrame(x1, y1, x2, y2)
-	local width, height = term.getSize()
-	if x1 and x2 then
-		width = x2 - x1 + 1
-	end
-	if y1 and y2 then
-		height = y2 - y1 + 1
-	end
-
-	local x1 = x1 or 1
-	local y1 = y1 or 1
-	local x2 = x2 or (width - x1 + 1)
-	local y2 = y2 or (height - y1 + 1)
+local function newFrame(x, y, w, h)
+	local term_width, term_height = term.getSize()
+	x = x or 1
+	y = y or 1
+	w = w or term_width
+	h = h or term_height
 
 	---@class ThreeDFrame
 	local frame = {
 		---@class CollapsedCamera
 		camera = {
-			0.000001,
-			0.000001,
-			0.000001,
+			0,
+			0,
+			0,
 			nil,
 			0,
 			0,
 		},
-		buffer = newBuffer(x1, y1, x2, y2),
-		x1 = x1,
-		y1 = y1,
-		x2 = x2,
-		y2 = y2,
-		width = width,
-		height = height,
+		buffer = newBuffer(x, y, w, h),
+		width = w * 2,
+		height = h * 3,
 	}
 	frame.FoV = 90
 	frame.camera[7] = rad(frame.FoV)
@@ -1345,16 +1306,12 @@ local function newFrame(x1, y1, x2, y2)
 		sXFactor = 0.0001 * frame.width / frame.t
 		sYFactor = -0.0001 * frame.width / (frame.t * frame.height) * frame.height
 	end
+	updateMappingConstants()
 
-	function frame:setSize(x1, y1, x2, y2)
-		self.x1 = x1
-		self.y1 = y1
-		self.x2 = x2
-		self.y2 = y2
-
-		self.width = (x2 - x1 + 1) * 2
-		self.height = (y2 - y1 + 1) * 3
-		self.buffer:setBufferSize(x1, y1, x1 + self.width - 1, y1 + self.height - 1)
+	function frame:setSize(x, y, w, h)
+		self.width = w * 2
+		self.height = h * 3
+		self.buffer:setSize(x, y, w, h)
 		updateMappingConstants()
 	end
 
@@ -1447,26 +1404,26 @@ local function newFrame(x1, y1, x2, y2)
 		end
 
 		-- frustum culling left/right
-		local FoV = 0.5*camera[7]
+		local FoV = 0.5 * camera[7]
 		local dotX = sin(FoV)
 		local dotZ = cos(FoV)
 
-		if (dX + modelSize)*dotX + (dZ + modelSize)*dotZ < 0 then
+		if (dX + modelSize) * dotX + (dZ + modelSize) * dotZ < 0 then
 			return true
 		end
-		if (dX + modelSize)*dotX - (dZ - modelSize)*dotZ < 0 then
+		if (dX + modelSize) * dotX - (dZ - modelSize) * dotZ < 0 then
 			return true
 		end
 
 		-- frustum culling top/bottom
-		local verticalFOV = 0.5*camera[8]
+		local verticalFOV = 0.5 * camera[8]
 		local dotX = sin(verticalFOV)
 		local dotY = cos(verticalFOV)
 
-		if (dX + modelSize)*dotX + (dY + modelSize)*dotY < 0 then
+		if (dX + modelSize) * dotX + (dY + modelSize) * dotY < 0 then
 			return true
 		end
-		if (dX + modelSize)*dotX - (dY - modelSize)*dotY < 0 then
+		if (dX + modelSize) * dotX - (dY - modelSize) * dotY < 0 then
 			return true
 		end
 
@@ -1478,7 +1435,8 @@ local function newFrame(x1, y1, x2, y2)
 		end
 		computePolyCamDistance(model, oX, oY, oZ, camera)
 
-		local clippingEnabled = xCameraOffset*xCameraOffset + yCameraOffset*yCameraOffset + zCameraOffset*zCameraOffset < modelSize*modelSize*4
+		local clippingEnabled = xCameraOffset * xCameraOffset + yCameraOffset * yCameraOffset + zCameraOffset * zCameraOffset <
+			modelSize * modelSize * 4
 
 		local renderOffsetX = renderOffsetX
 		local renderOffsetY = renderOffsetY
@@ -1792,7 +1750,7 @@ local function newFrame(x1, y1, x2, y2)
 						if polygon[10] or (BX - AX) * (y3 - BY) - (BY - AY) * (x3 - BX) < 0 then
 							buff:drawTriangle(AX, AY, BX, BY, x3, y3, polygon[11], polygon[12], depth, 0.0001, 0.0001, dX3)
 						end
-					--else
+						--else
 						-- 0 0 0
 						-- (Don't draw anything)
 					end
@@ -1863,7 +1821,7 @@ local function newFrame(x1, y1, x2, y2)
 				self.camera[8],
 			}
 		end
-		if self.camera[4] == math.pi*0.5 then
+		if self.camera[4] == math.pi * 0.5 then
 			self.camera[4] = nil
 		end
 	end
@@ -2002,10 +1960,10 @@ local function newFrame(x1, y1, x2, y2)
 								local avgY = yCameraOffset + (polygon[2] + polygon[5] + polygon[8]) / 3
 								local avgZ = zCameraOffset + (polygon[3] + polygon[6] + polygon[9]) / 3
 
-								local depth = avgX*avgX + avgY*avgY + avgZ*avgZ -- relative distance
+								local depth = avgX * avgX + avgY * avgY + avgZ * avgZ -- relative distance
 
 								if isInTriangle(x, y, x1, y1, x2, y2, x3, y3, (selfX2 - 1) * 2 + 1, (selfY1 - 1) * 3 + 1, (selfX2) * 2, (selfY2 + 1) * 3) then
-									solutions[#solutions+1] = {objectIndex = i, polygonIndex = j, depth = depth}
+									solutions[#solutions + 1] = {objectIndex = i, polygonIndex = j, depth = depth}
 								end
 							end
 						end
@@ -2119,11 +2077,6 @@ local function newFrame(x1, y1, x2, y2)
 
 	frame:depthInterpolation(true)
 
-	frame.width = (frame.x2 - frame.x1 + 1) * 2
-	frame.height = (frame.y2 - frame.y1 + 1) * 3
-	frame.buffer:setBufferSize(frame.x1, frame.y1, frame.x1 + frame.width - 1, frame.y1 + frame.height - 1)
-	updateMappingConstants()
-
 	return frame
 end
 
@@ -2144,7 +2097,15 @@ local function newPoly(x1, y1, z1, x2, y2, z2, x3, y3, z3, c)
 
 	---@type Polygon
 	local poly = {
-		x1 = x1, y1 = y1, z1 = z1, x2 = x2, y2 = y2, z2 = z2, x3 = x3, y3 = y3, z3 = z3,
+		x1 = x1,
+		y1 = y1,
+		z1 = z1,
+		x2 = x2,
+		y2 = y2,
+		z2 = z2,
+		x3 = x3,
+		y3 = y3,
+		z3 = z3,
 		c = c,
 	}
 	return poly
@@ -2155,18 +2116,18 @@ function models:cube(options)
 	options.color = options.color or colors.red
 	---@class Model
 	local cube = {
-		newPoly(-.5,-.5,-.5, .5,-.5,.5, -.5,-.5,.5, options.bottom or options.color),
-		newPoly(-.5,-.5,-.5, .5,-.5,-.5, .5,-.5,.5, options.bottom2 or options.bottom or options.color),
-		newPoly(-.5,.5,-.5, -.5,.5,.5, .5,.5,.5, options.top or options.color),
-		newPoly(-.5,.5,-.5, .5,.5,.5, .5,.5,-.5, options.top or options.color),
-		newPoly(-.5,-.5,-.5, -.5,-.5,.5, -.5,.5,-.5, options.side or options.color),
-		newPoly(-.5,-.5,.5, -.5,.5,.5, -.5,.5,-.5, options.side2 or options.side or options.color),
-		newPoly(.5,-.5,-.5, .5,.5,.5, .5,-.5,.5, options.side or options.color),
-		newPoly(.5,-.5,-.5, .5,.5,-.5, .5,.5,.5, options.side2 or options.side or options.color),
-		newPoly(-.5,-.5,-.5, .5,.5,-.5, .5,-.5,-.5, options.side or options.color),
-		newPoly(-.5,-.5,-.5, -.5,.5,-.5, .5,.5,-.5, options.side2 or options.side or options.color),
-		newPoly(-.5,-.5,.5, .5,-.5,.5, -.5,.5,.5, options.side or options.color),
-		newPoly(.5,-.5,.5, .5,.5,.5, -.5,.5,.5, options.side2 or options.side or options.color),
+		newPoly(-.5, -.5, -.5, .5, -.5, .5, -.5, -.5, .5, options.bottom or options.color),
+		newPoly(-.5, -.5, -.5, .5, -.5, -.5, .5, -.5, .5, options.bottom2 or options.bottom or options.color),
+		newPoly(-.5, .5, -.5, -.5, .5, .5, .5, .5, .5, options.top or options.color),
+		newPoly(-.5, .5, -.5, .5, .5, .5, .5, .5, -.5, options.top or options.color),
+		newPoly(-.5, -.5, -.5, -.5, -.5, .5, -.5, .5, -.5, options.side or options.color),
+		newPoly(-.5, -.5, .5, -.5, .5, .5, -.5, .5, -.5, options.side2 or options.side or options.color),
+		newPoly(.5, -.5, -.5, .5, .5, .5, .5, -.5, .5, options.side or options.color),
+		newPoly(.5, -.5, -.5, .5, .5, -.5, .5, .5, .5, options.side2 or options.side or options.color),
+		newPoly(-.5, -.5, -.5, .5, .5, -.5, .5, -.5, -.5, options.side or options.color),
+		newPoly(-.5, -.5, -.5, -.5, .5, -.5, .5, .5, -.5, options.side2 or options.side or options.color),
+		newPoly(-.5, -.5, .5, .5, -.5, .5, -.5, .5, .5, options.side or options.color),
+		newPoly(.5, -.5, .5, .5, .5, .5, -.5, .5, .5, options.side2 or options.side or options.color),
 	}
 
 	for name, func in pairs(transforms) do
@@ -2184,19 +2145,19 @@ function models:sphere(options)
 	local model = {}
 	local prevPoints = {}
 	for i = 0, options.res do
-		local y = 0.5*cos(i/options.res*pi)
+		local y = 0.5 * cos(i / options.res * pi)
 		local newPrevPoints = {}
 		for j = 0, options.res do
-			local radius = 0.5 * sqrt(1 - (y*2)*(y*2))
-			local x = cos(j/options.res*pi*2) * radius
-			local z = sin(j/options.res*pi*2) * radius
-			local x2 = cos((j+1)/options.res*pi*2) * radius
-			local z2 = sin((j+1)/options.res*pi*2) * radius
+			local radius = 0.5 * sqrt(1 - (y * 2) * (y * 2))
+			local x = cos(j / options.res * pi * 2) * radius
+			local z = sin(j / options.res * pi * 2) * radius
+			local x2 = cos((j + 1) / options.res * pi * 2) * radius
+			local z2 = sin((j + 1) / options.res * pi * 2) * radius
 			if (prevPoints[j]) then
-				model[#model+1] = {
-					x1 = prevPoints[(j+1) % options.res].x,
-					y1 = prevPoints[(j+1) % options.res].y,
-					z1 = prevPoints[(j+1) % options.res].z,
+				model[#model + 1] = {
+					x1 = prevPoints[(j + 1) % options.res].x,
+					y1 = prevPoints[(j + 1) % options.res].y,
+					z1 = prevPoints[(j + 1) % options.res].z,
 					x2 = x,
 					y2 = y,
 					z2 = z,
@@ -2205,16 +2166,16 @@ function models:sphere(options)
 					z3 = prevPoints[j].z,
 					c = options.color,
 				}
-				model[#model+1] = {
+				model[#model + 1] = {
 					x1 = x2,
 					y1 = y,
 					z1 = z2,
 					x2 = x,
 					y2 = y,
 					z2 = z,
-					x3 = prevPoints[(j+1) % options.res].x,
-					y3 = prevPoints[(j+1) % options.res].y,
-					z3 = prevPoints[(j+1) % options.res].z,
+					x3 = prevPoints[(j + 1) % options.res].x,
+					y3 = prevPoints[(j + 1) % options.res].y,
+					z3 = prevPoints[(j + 1) % options.res].z,
 					c = options.color2 or options.color,
 				}
 			end
@@ -2229,7 +2190,7 @@ function models:sphere(options)
 			local poly = model[i]
 			local avgY = (poly.y1 + poly.y2 + poly.y3) / 3
 			if options.colors then
-				local index = floor((-avgY + 0.5) * (#options.colors)+1)
+				local index = floor((-avgY + 0.5) * (#options.colors) + 1)
 				poly.c = options.colors[index] or poly.c
 			else
 				if avgY >= 0 then
@@ -2247,28 +2208,30 @@ function models:sphere(options)
 
 	return model
 end
+
 ---@param options {res: number?, color: number?, color2: number?, colors: number[]?, top: number?, bottom: number?, colorsFractal: boolean?}
 function models:icosphere(options)
 	options.res = options.res or 1
 
-	local phi = (1 + sqrt(5))/2
+	local phi = (1 + sqrt(5)) / 2
 	local v = {
-		{phi, 1, 0},
-		{phi, -1, 0},
-		{-phi, -1, 0},
-		{-phi, 1, 0},
-		{1, 0, phi},
-		{-1, 0, phi},
-		{-1, 0, -phi},
-		{1, 0, -phi},
-		{0, phi, 1},
-		{0, phi, -1},
-		{0, -phi, -1},
-		{0, -phi, 1},
+		{phi,  1,    0},
+		{phi,  -1,   0},
+		{-phi, -1,   0},
+		{-phi, 1,    0},
+		{1,    0,    phi},
+		{-1,   0,    phi},
+		{-1,   0,    -phi},
+		{1,    0,    -phi},
+		{0,    phi,  1},
+		{0,    phi,  -1},
+		{0,    -phi, -1},
+		{0,    -phi, 1},
 	}
 
 	local function buildPoly(i1, i2, i3)
-		return newPoly(v[i1][1], v[i1][2], v[i1][3], v[i2][1], v[i2][2], v[i2][3], v[i3][1], v[i3][2], v[i3][3], options.colors and 1 or options.color)
+		return newPoly(v[i1][1], v[i1][2], v[i1][3], v[i2][1], v[i2][2], v[i2][3], v[i3][1], v[i3][2], v[i3][3],
+			options.colors and 1 or options.color)
 	end
 
 	---@class Model
@@ -2304,19 +2267,19 @@ function models:icosphere(options)
 			local poly = model[i]
 
 			local AB = {
-				x = (poly.x1 + poly.x2)/2,
-				y = (poly.y1 + poly.y2)/2,
-				z = (poly.z1 + poly.z2)/2,
+				x = (poly.x1 + poly.x2) / 2,
+				y = (poly.y1 + poly.y2) / 2,
+				z = (poly.z1 + poly.z2) / 2,
 			}
 			local AC = {
-				x = (poly.x1 + poly.x3)/2,
-				y = (poly.y1 + poly.y3)/2,
-				z = (poly.z1 + poly.z3)/2,
+				x = (poly.x1 + poly.x3) / 2,
+				y = (poly.y1 + poly.y3) / 2,
+				z = (poly.z1 + poly.z3) / 2,
 			}
 			local BC = {
-				x = (poly.x2 + poly.x3)/2,
-				y = (poly.y2 + poly.y3)/2,
-				z = (poly.z2 + poly.z3)/2,
+				x = (poly.x2 + poly.x3) / 2,
+				y = (poly.y2 + poly.y3) / 2,
+				z = (poly.z2 + poly.z3) / 2,
 			}
 
 			local nextColor = poly.c
@@ -2324,22 +2287,22 @@ function models:icosphere(options)
 				nextColor = (nextColor % #options.colors) + 1
 			end
 
-			newModel[#newModel+1] = newPoly(AB.x, AB.y, AB.z, BC.x, BC.y, BC.z, AC.x, AC.y, AC.z, poly.c)
-			newModel[#newModel+1] = newPoly(poly.x1, poly.y1, poly.z1, AB.x, AB.y, AB.z, AC.x, AC.y, AC.z, nextColor)
-			newModel[#newModel+1] = newPoly(AB.x, AB.y, AB.z, poly.x2, poly.y2, poly.z2, BC.x, BC.y, BC.z, nextColor)
-			newModel[#newModel+1] = newPoly(AC.x, AC.y, AC.z, BC.x, BC.y, BC.z, poly.x3, poly.y3, poly.z3, nextColor)
+			newModel[#newModel + 1] = newPoly(AB.x, AB.y, AB.z, BC.x, BC.y, BC.z, AC.x, AC.y, AC.z, poly.c)
+			newModel[#newModel + 1] = newPoly(poly.x1, poly.y1, poly.z1, AB.x, AB.y, AB.z, AC.x, AC.y, AC.z, nextColor)
+			newModel[#newModel + 1] = newPoly(AB.x, AB.y, AB.z, poly.x2, poly.y2, poly.z2, BC.x, BC.y, BC.z, nextColor)
+			newModel[#newModel + 1] = newPoly(AC.x, AC.y, AC.z, BC.x, BC.y, BC.z, poly.x3, poly.y3, poly.z3, nextColor)
 		end
 		model = newModel
 	end
 
-	for i = 1, options.res-1 do
+	for i = 1, options.res - 1 do
 		subdivide()
 	end
 
 	local function forceLength(x, y, z)
-		local length = math.sqrt(x*x + y*y + z*z)
+		local length = math.sqrt(x * x + y * y + z * z)
 		local ratio = 0.5 / length
-		return x*ratio, y*ratio, z*ratio
+		return x * ratio, y * ratio, z * ratio
 	end
 
 	for i = 1, #model do
@@ -2350,7 +2313,7 @@ function models:icosphere(options)
 		if not options.colorsFractal then
 			local avgY = (poly.y1 + poly.y2 + poly.y3) / 3
 			if (options.colors) then
-				local index = math.floor((-avgY + 0.5) * (#options.colors)+1)
+				local index = math.floor((-avgY + 0.5) * (#options.colors) + 1)
 				poly.c = options.colors[index] or poly.c
 			else
 				if (avgY >= 0) then
@@ -2370,6 +2333,7 @@ function models:icosphere(options)
 
 	return model
 end
+
 ---@param options {size: number?, color: number?, y: number?}
 function models:plane(options)
 	options.color = options.color or colors.lime
@@ -2377,8 +2341,10 @@ function models:plane(options)
 	options.y = options.y or 0
 	---@class Model
 	local plane = {
-		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, -1 * options.size, -1 * options.size, options.y, -1 * options.size, options.color),
-		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, -1 * options.size, options.color),
+		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, -1 * options.size, -1 * options.size, options.y,
+			-1 * options.size, options.color),
+		newPoly(-1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y, 1 * options.size, 1 * options.size, options.y,
+			-1 * options.size, options.color),
 	}
 
 	for name, func in pairs(transforms) do
@@ -2387,6 +2353,7 @@ function models:plane(options)
 
 	return plane
 end
+
 ---@param options {res: number?, randomOffset: number?, height: number?, randomHeight: number?, y: number?, scale: number?, color: number?, snowColor: number?, snow: boolean?, snowHeight: number?}
 function models:mountains(options)
 	options.res = options.res or 20
@@ -2398,22 +2365,22 @@ function models:mountains(options)
 	options.color = options.color or colors.green
 	options.snowColor = options.snowColor or colors.white
 
-	local minHeight = 3/options.res * options.height / (options.randomHeight + 1)
-	local maxHeight = 3/options.res * options.height * (options.randomHeight + 1)
+	local minHeight = 3 / options.res * options.height / (options.randomHeight + 1)
+	local maxHeight = 3 / options.res * options.height * (options.randomHeight + 1)
 
 	---@class Model
 	local model = {}
 	for i = 0, options.res do
-		local offset = math.random(-options.randomOffset*100, options.randomOffset*100)/100
+		local offset = math.random(-options.randomOffset * 100, options.randomOffset * 100) / 100
 		local pos = i + offset
-		local x1 = cos((pos-1)  /options.res*pi*2) * options.scale
-		local z1 = sin((pos-1)  /options.res*pi*2) * options.scale
-		local x2 = cos((pos-0.5)/options.res*pi*2) * options.scale
-		local z2 = sin((pos-0.5)/options.res*pi*2) * options.scale
-		local x3 = cos(pos	  /options.res*pi*2) * options.scale
-		local z3 = sin(pos	  /options.res*pi*2) * options.scale
+		local x1 = cos((pos - 1) / options.res * pi * 2) * options.scale
+		local z1 = sin((pos - 1) / options.res * pi * 2) * options.scale
+		local x2 = cos((pos - 0.5) / options.res * pi * 2) * options.scale
+		local z2 = sin((pos - 0.5) / options.res * pi * 2) * options.scale
+		local x3 = cos(pos / options.res * pi * 2) * options.scale
+		local z3 = sin(pos / options.res * pi * 2) * options.scale
 
-		local mountainHeight = math.random(minHeight*100, maxHeight*100) / 100 * options.scale
+		local mountainHeight = math.random(minHeight * 100, maxHeight * 100) / 100 * options.scale
 
 		local polygon = {
 			x1 = x1,
@@ -2428,29 +2395,29 @@ function models:mountains(options)
 			c = options.color,
 			forceRender = true,
 		}
-		model[#model+1] = polygon
+		model[#model + 1] = polygon
 
 		if options.snow then
 			local snowDistance = 0.93
 			local realSnowRatio = options.snowHeight or 0.5
-			local snowRatio = 1 - (realSnowRatio * maxHeight) / (mountainHeight/options.scale)
+			local snowRatio = 1 - (realSnowRatio * maxHeight) / (mountainHeight / options.scale)
 			snowRatio = max(0, min(1, snowRatio))
 
 			if snowRatio > 0.2 then
 				local snowPolygon = {
-					x1 = (x1*snowRatio + x2*(1-snowRatio)) * snowDistance,
-					y1 = options.y + mountainHeight*(1-snowRatio),
-					z1 = (z1*snowRatio + z2*(1-snowRatio)) * snowDistance,
-					x2 = (x3*snowRatio + x2*(1-snowRatio)) * snowDistance,
-					y2 = options.y + mountainHeight*(1-snowRatio),
-					z2 = (z3*snowRatio + z2*(1-snowRatio)) * snowDistance,
+					x1 = (x1 * snowRatio + x2 * (1 - snowRatio)) * snowDistance,
+					y1 = options.y + mountainHeight * (1 - snowRatio),
+					z1 = (z1 * snowRatio + z2 * (1 - snowRatio)) * snowDistance,
+					x2 = (x3 * snowRatio + x2 * (1 - snowRatio)) * snowDistance,
+					y2 = options.y + mountainHeight * (1 - snowRatio),
+					z2 = (z3 * snowRatio + z2 * (1 - snowRatio)) * snowDistance,
 					x3 = x2 * snowDistance,
 					y3 = options.y + mountainHeight,
 					z3 = z2 * snowDistance,
 					c = options.snowColor,
 					forceRender = true,
 				}
-				model[#model+1] = snowPolygon
+				model[#model + 1] = snowPolygon
 			end
 		end
 	end
