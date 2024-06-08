@@ -5,9 +5,7 @@ local floor = math.floor
 local concat = table.concat
 
 local colorChar = {}
-for i = 1, 16 do
-	colorChar[2 ^ (i - 1)] = ("0123456789abcdef"):sub(i, i)
-end
+for i = 1, 16 do colorChar[2 ^ (i - 1)] = ("0123456789abcdef"):sub(i, i) end
 
 local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
 	local freq = {}
@@ -39,15 +37,25 @@ local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
 	return highest, secondHighest
 end
 
-local relationsBlittle = {[0] = {8, 4, 3, 6, 5}, {4, 14, 8, 7}, {6, 10, 8, 7}, {9, 11, 8, 0}, {1, 14, 8, 0}, {13, 12, 8, 0}, {2, 10, 8, 0}, {15, 8, 10, 11, 12, 14}, {0, 7, 1, 9, 2, 13}, {3, 11, 8, 7}, {2, 6, 7, 15}, {9, 3, 7, 15}, {13, 5, 7, 15}, {5, 12, 8, 7}, {1, 4, 7, 15}, {7, 10, 11, 12, 14}}
-local relations = {}
-for i = 0, 15 do
-	local r = relationsBlittle[i]
-	for i = 1, #r do
-		r[i] = math.pow(2, r[i])
+local relations
+local function computeClosestColors(win)
+	relations = {}
+	for c1 = 1, 16 do
+		local r1, g1, b1 = win.getPaletteColor(2 ^ (c1 - 1))
+		local closestColors = {}
+		local distances = {}
+		for c2 = 1, 16 do
+			local r2, g2, b2 = win.getPaletteColor(2 ^ (c2 - 1))
+			local d = (r2 - r1) ^ 2 + (g2 - g1) ^ 2 + (b2 - b1) ^ 2
+			local i = 1
+			while distances[i] and distances[i] < d do i = i + 1 end
+			table.insert(closestColors, i, 2 ^ (c2 - 1))
+			table.insert(distances, i, d)
+		end
+		relations[2 ^ (c1 - 1)] = closestColors
 	end
-	relations[math.pow(2, i)] = r
 end
+
 local function colorCloser(target, c1, c2)
 	local r = relations[target]
 	for i = 1, #r do
@@ -81,6 +89,8 @@ end
 local function drawBuffer(buffer, win)
 	local height = #buffer
 	local width = #buffer[1]
+
+	if not relations then computeClosestColors(win) end
 
 	local maxX = floor(width / 2)
 	local setCursorPos = win.setCursorPos
@@ -138,4 +148,5 @@ end
 
 return {
 	drawBuffer = drawBuffer,
+	recomputeClosestColors = computeClosestColors
 }
