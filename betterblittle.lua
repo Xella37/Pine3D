@@ -38,14 +38,37 @@ local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
 end
 
 local relations
-local function computeClosestColors(win)
+
+local function sRGBtoLinearRGB(r, g, b)
+	local function f(v) return v >= 0.04045 and ((v + 0.055) / (1 + 0.055)) ^ 2.4 or (v / 12.92) end
+	return f(r), f(g), f(b)
+end
+
+-- Based on https://bottosson.github.io/posts/oklab/#converting-from-linear-srgb-to-oklab
+local function linearRGBtoOklab(r, g, b)
+	local l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ^ (1 / 3)
+	local m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ^ (1 / 3)
+	local s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ^ (1 / 3)
+	return
+		0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+		1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+		0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+end
+
+---Compute closest colors from current palette to resolve color conflicts 
+---@param window Redirect
+---@param colorSpace "sRGB" | "linearRGB" | "Oklab" | nil default: Oklab
+local function computeClosestColors(window, colorSpace)
 	relations = {}
 	for c1 = 1, 16 do
-		local r1, g1, b1 = win.getPaletteColor(2 ^ (c1 - 1))
-		local closestColors = {}
-		local distances = {}
+		local r1, g1, b1 = window.getPaletteColor(2 ^ (c1 - 1))
+		if colorSpace ~= "sRGB" then r1, g1, b1 = sRGBtoLinearRGB(r1, g1, b1) end
+		if colorSpace == "Oklab" or not colorSpace then r1, g1, b1 = linearRGBtoOklab(r1, g1, b1) end
+		local closestColors, distances = {}, {}
 		for c2 = 1, 16 do
-			local r2, g2, b2 = win.getPaletteColor(2 ^ (c2 - 1))
+			local r2, g2, b2 = window.getPaletteColor(2 ^ (c2 - 1))
+			if colorSpace ~= "sRGB" then r2, g2, b2 = sRGBtoLinearRGB(r2, g2, b2) end
+			if colorSpace == "Oklab" or not colorSpace then r2, g2, b2 = linearRGBtoOklab(r2, g2, b2) end
 			local d = (r2 - r1) ^ 2 + (g2 - g1) ^ 2 + (b2 - b1) ^ 2
 			local i = 1
 			while distances[i] and distances[i] < d do i = i + 1 end
