@@ -1,11 +1,13 @@
-
 -- Made by Xella
 
 local floor = math.floor
+local min = math.min
 local concat = table.concat
 
 local colorChar = {}
 for i = 1, 16 do colorChar[2 ^ (i - 1)] = ("0123456789abcdef"):sub(i, i) end
+
+local colorDistances
 
 local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
 	local freq = {}
@@ -16,36 +18,44 @@ local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
 	freq[p5] = (freq[p5] or 0) + 1
 	freq[p6] = (freq[p6] or 0) + 1
 
-	local highest = p1
+	local c1 = p1
+	local c2 = p1
+	local totalColors = 0
 	local highestCount = 0
-	local secondHighest = p1
-	local secondHighestCount = 0
 	for color, count in pairs(freq) do
-		if count > secondHighestCount then
-			if count > highestCount then
-				secondHighest = highest
-				secondHighestCount = highestCount
-				highest = color
-				highestCount = count
-			else
-				secondHighest = color
-				secondHighestCount = count
+		totalColors = totalColors + 1
+		if color ~= c1 then c2 = color end
+		if count > highestCount then
+			c2 = c1
+			c1 = color
+			highestCount = count
+		end
+	end
+
+	if totalColors <= 2 then return c1, c2 end
+
+	local bestC2 = p1
+	local lowestError = 99
+	local c1Dists = colorDistances[c1]
+	for c2, _ in pairs(freq) do
+		local c2Dists = colorDistances[c2]
+		if c2 ~= c1 then
+			local err = min(c1Dists[p1], c2Dists[p1]) + min(c1Dists[p2], c2Dists[p2]) + min(c1Dists[p3], c2Dists[p3])
+				+ min(c1Dists[p4], c2Dists[p4]) + min(c1Dists[p5], c2Dists[p5]) + min(c1Dists[p6], c2Dists[p6])
+			if err < lowestError then
+				lowestError = err
+				bestC2 = c2
 			end
 		end
 	end
 
-	return highest, secondHighest
-end
-
-local relations
-
-local function sRGBtoLinearRGB(r, g, b)
-	local function f(v) return v >= 0.04045 and ((v + 0.055) / (1 + 0.055)) ^ 2.4 or (v / 12.92) end
-	return f(r), f(g), f(b)
+	return c1, bestC2
 end
 
 -- Based on https://bottosson.github.io/posts/oklab/#converting-from-linear-srgb-to-oklab
-local function linearRGBtoOklab(r, g, b)
+local function sRGBtoOklab(r, g, b)
+	local function f(v) return v >= 0.04045 and ((v + 0.055) / (1 + 0.055)) ^ 2.4 or (v / 12.92) end
+	r, g, b = f(r), f(g), f(b)
 	local l = (0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b) ^ (1 / 3)
 	local m = (0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b) ^ (1 / 3)
 	local s = (0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b) ^ (1 / 3)
@@ -55,45 +65,33 @@ local function linearRGBtoOklab(r, g, b)
 		0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
 end
 
----Compute closest colors from current palette to resolve color conflicts 
+---Compute distances between colors from current palette using a color space
 ---@param window Redirect
----@param colorSpace "sRGB" | "linearRGB" | "Oklab" | nil default: Oklab
-local function computeClosestColors(window, colorSpace)
-	relations = {}
+---@param colorSpace "Oklab" | "sRGB" | nil default: Oklab
+local function computeColorDistances(window, colorSpace)
+	colorDistances = {}
 	for c1 = 1, 16 do
 		local r1, g1, b1 = window.getPaletteColor(2 ^ (c1 - 1))
-		if colorSpace ~= "sRGB" then r1, g1, b1 = sRGBtoLinearRGB(r1, g1, b1) end
-		if colorSpace == "Oklab" or not colorSpace then r1, g1, b1 = linearRGBtoOklab(r1, g1, b1) end
-		local closestColors, distances = {}, {}
+		if colorSpace ~= "sRGB" then r1, g1, b1 = sRGBtoOklab(r1, g1, b1) end
+		local distances = {}
 		for c2 = 1, 16 do
 			local r2, g2, b2 = window.getPaletteColor(2 ^ (c2 - 1))
-			if colorSpace ~= "sRGB" then r2, g2, b2 = sRGBtoLinearRGB(r2, g2, b2) end
-			if colorSpace == "Oklab" or not colorSpace then r2, g2, b2 = linearRGBtoOklab(r2, g2, b2) end
+			if colorSpace ~= "sRGB" then r2, g2, b2 = sRGBtoOklab(r2, g2, b2) end
 			local d = (r2 - r1) ^ 2 + (g2 - g1) ^ 2 + (b2 - b1) ^ 2
-			local i = 1
-			while distances[i] and distances[i] < d do i = i + 1 end
-			table.insert(closestColors, i, 2 ^ (c2 - 1))
-			table.insert(distances, i, d)
+			distances[2 ^ (c2 - 1)] = d
 		end
-		relations[2 ^ (c1 - 1)] = closestColors
+		colorDistances[2 ^ (c1 - 1)] = distances
 	end
 end
 
 local function colorCloser(target, c1, c2)
-	local r = relations[target]
-	for i = 1, #r do
-		if r[i] == c1 then return true
-		elseif r[i] == c2 then return false end
-	end
-
-	return false
+	local dists = colorDistances[target]
+	return dists[c1] < dists[c2]
 end
 
 local char = string.char
 local allChars = {}
-for i = 128, 128+31 do
-	allChars[i] = char(i)
-end
+for i = 128, 128+31 do allChars[i] = char(i) end
 local bxor = bit.bxor
 local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
 	local cc = colorCloser
@@ -113,7 +111,7 @@ local function drawBuffer(buffer, win)
 	local height = #buffer
 	local width = #buffer[1]
 
-	if not relations then computeClosestColors(win) end
+	if not colorDistances then computeColorDistances(win) end
 
 	local maxX = floor(width / 2)
 	local setCursorPos = win.setCursorPos
@@ -171,5 +169,5 @@ end
 
 return {
 	drawBuffer = drawBuffer,
-	recomputeClosestColors = computeClosestColors
+	recomputeColorDistances = computeColorDistances
 }
