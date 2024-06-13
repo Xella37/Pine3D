@@ -1,5 +1,4 @@
 -- Made by Xella
-
 local floor = math.floor
 local min = math.min
 local concat = table.concat
@@ -88,7 +87,7 @@ end
 
 local char = string.char
 local allChars = {}
-for i = 128, 128+31 do allChars[i] = char(i) end
+for i = 128, 128 + 31 do allChars[i] = char(i) end
 local bxor = bit.bxor
 local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
 	local c1Dist = colorDistances[c1]
@@ -105,35 +104,43 @@ local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
 	return allChars[charNr], false
 end
 
-local function drawBuffer(buffer, win)
+---Draw a color buffer to the window
+---@param buffer integer[][] 2D array of colors to display
+---@param window Redirect
+---@param wx integer? x position on monitor (in terminal character pixels)
+---@param wy integer? y position on monitor (in terminal character pixels)
+local function drawBuffer(buffer, window, wx, wy)
+	wx = wx or 1
+	wy = wy or 1
+
 	local height = #buffer
 	local width = #buffer[1]
 
-	if not colorDistances then computeColorDistances(win) end
+	if not colorDistances then computeColorDistances(window) end
 
 	local maxX = floor(width / 2)
-	local setCursorPos = win.setCursorPos
-	local blit = win.blit
+	local setCursorPos = window.setCursorPos
+	local blit = window.blit
 	local colorChar = colorChar
-	for y = 1, floor(height / 3) do
-		local oy = (y-1) * 3 + 1
+	for y = 0, floor(height / 3) - 1 do
+		local oy = y * 3 + 1
 
 		local r1 = buffer[oy] -- first row from buffer for this row of characters
-		local r2 = buffer[oy+1] -- second row from buffer for this row of characters
-		local r3 = buffer[oy+2] -- third row from buffer for this row of characters
+		local r2 = buffer[oy + 1] -- second row from buffer for this row of characters
+		local r3 = buffer[oy + 2] -- third row from buffer for this row of characters
 
 		local blitC1 = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 		local blitC2 = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 		local blitChar = {nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil}
 		for x = 1, maxX do
-			local ox = (x-1) * 2 + 1
+			local ox = (x - 1) * 2 + 1
 
 			local p1 = colorMap[r1[ox]]
-			local p2 = colorMap[r1[ox+1]]
+			local p2 = colorMap[r1[ox + 1]]
 			local p3 = colorMap[r2[ox]]
-			local p4 = colorMap[r2[ox+1]]
+			local p4 = colorMap[r2[ox + 1]]
 			local p5 = colorMap[r3[ox]]
-			local p6 = colorMap[r3[ox+1]]
+			local p6 = colorMap[r3[ox + 1]]
 			if p1 == p2 and p2 == p3 and p3 == p4 and p4 == p5 and p5 == p6 then
 				local c = colorChar[p1]
 				blitC1[x] = c
@@ -160,7 +167,7 @@ local function drawBuffer(buffer, win)
 		local c1 = con(blitChar)
 		local c2 = con(blitC1)
 		local c3 = con(blitC2)
-		setCursorPos(1, y)
+		setCursorPos(wx, wy + y)
 		blit(c1, c2, c3)
 	end
 end
