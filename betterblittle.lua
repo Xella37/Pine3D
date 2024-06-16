@@ -12,25 +12,28 @@ for i = 1, 16 do colorChar[i] = ("0123456789abcdef"):sub(i, i) end
 local colorDistances
 
 local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
-	local freq = {}
+	local freq = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	freq[p1] = 1
-	freq[p2] = (freq[p2] or 0) + 1
-	freq[p3] = (freq[p3] or 0) + 1
-	freq[p4] = (freq[p4] or 0) + 1
-	freq[p5] = (freq[p5] or 0) + 1
-	freq[p6] = (freq[p6] or 0) + 1
+	freq[p2] = freq[p2] + 1
+	freq[p3] = freq[p3] + 1
+	freq[p4] = freq[p4] + 1
+	freq[p5] = freq[p5] + 1
+	freq[p6] = freq[p6] + 1
 
 	local c1 = p1
 	local c2 = p1
 	local totalColors = 0
 	local highestCount = 0
-	for color, count in pairs(freq) do
-		totalColors = totalColors + 1
-		if color ~= c1 then c2 = color end
-		if count > highestCount then
-			c2 = c1
-			c1 = color
-			highestCount = count
+	for color = 1, 16 do
+		local count = freq[color]
+		if count > 0 then
+			totalColors = totalColors + 1
+			if color ~= c1 then c2 = color end
+			if count > highestCount then
+				c2 = c1
+				c1 = color
+				highestCount = count
+			end
 		end
 	end
 
@@ -39,9 +42,9 @@ local function getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
 	local bestC2 = p1
 	local lowestError = 99
 	local c1Dists = colorDistances[c1]
-	for c2, _ in pairs(freq) do
-		local c2Dists = colorDistances[c2]
-		if c2 ~= c1 then
+	for c2 = 1, 16 do
+		if c2 ~= c1 and freq[c2] > 0 then
+			local c2Dists = colorDistances[c2]
 			local err = min(c1Dists[p1], c2Dists[p1]) + min(c1Dists[p2], c2Dists[p2]) + min(c1Dists[p3], c2Dists[p3])
 				+ min(c1Dists[p4], c2Dists[p4]) + min(c1Dists[p5], c2Dists[p5]) + min(c1Dists[p6], c2Dists[p6])
 			if err < lowestError then
