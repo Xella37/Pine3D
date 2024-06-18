@@ -96,12 +96,12 @@ local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
 	local c1Dist = colorDistances[c1]
 	local c2Dist = colorDistances[c2]
 	local charNr = 128
-	if p1 == c1 or p1 ~= c2 and c1Dist[p1] < c2Dist[p1] then charNr = charNr + 1 end
-	if p2 == c1 or p2 ~= c2 and c1Dist[p2] < c2Dist[p2] then charNr = charNr + 2 end
-	if p3 == c1 or p3 ~= c2 and c1Dist[p3] < c2Dist[p3] then charNr = charNr + 4 end
-	if p4 == c1 or p4 ~= c2 and c1Dist[p4] < c2Dist[p4] then charNr = charNr + 8 end
-	if p5 == c1 or p5 ~= c2 and c1Dist[p5] < c2Dist[p5] then charNr = charNr + 16 end
-	if p6 == c1 or p6 ~= c2 and c1Dist[p6] < c2Dist[p6] then
+	if c1Dist[p1] < c2Dist[p1] then charNr = charNr + 1 end
+	if c1Dist[p2] < c2Dist[p2] then charNr = charNr + 2 end
+	if c1Dist[p3] < c2Dist[p3] then charNr = charNr + 4 end
+	if c1Dist[p4] < c2Dist[p4] then charNr = charNr + 8 end
+	if c1Dist[p5] < c2Dist[p5] then charNr = charNr + 16 end
+	if c1Dist[p6] < c2Dist[p6] then
 		return allChars[bxor(31, charNr)], true
 	end
 	return allChars[charNr], false
