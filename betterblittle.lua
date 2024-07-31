@@ -90,21 +90,26 @@ end
 
 local char = string.char
 local allChars = {}
-for i = 128, 128 + 31 do allChars[i] = char(i) end
-local bxor = bit.bxor
-local function getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
+for i = 1, 32 do allChars[i] = char(i + 127) end
+local function getCharFomPixelGroup(p1, p2, p3, p4, p5, p6)
+	local c1, c2 = getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
 	local c1Dist = colorDistances[c1]
 	local c2Dist = colorDistances[c2]
-	local charNr = 128
-	if c1Dist[p1] < c2Dist[p1] then charNr = charNr + 1 end
-	if c1Dist[p2] < c2Dist[p2] then charNr = charNr + 2 end
-	if c1Dist[p3] < c2Dist[p3] then charNr = charNr + 4 end
-	if c1Dist[p4] < c2Dist[p4] then charNr = charNr + 8 end
-	if c1Dist[p5] < c2Dist[p5] then charNr = charNr + 16 end
 	if c1Dist[p6] < c2Dist[p6] then
-		return allChars[bxor(31, charNr)], true
+		local charNr = (c1Dist[p1] < c2Dist[p1] and 31 or 32)
+			- (c1Dist[p2] < c2Dist[p2] and 2 or 0)
+			- (c1Dist[p3] < c2Dist[p3] and 4 or 0)
+			- (c1Dist[p4] < c2Dist[p4] and 8 or 0)
+			- (c1Dist[p5] < c2Dist[p5] and 16 or 0)
+		return allChars[charNr], c2, c1
+	else
+		local charNr = (c1Dist[p1] < c2Dist[p1] and 2 or 1)
+			+ (c1Dist[p2] < c2Dist[p2] and 2 or 0)
+			+ (c1Dist[p3] < c2Dist[p3] and 4 or 0)
+			+ (c1Dist[p4] < c2Dist[p4] and 8 or 0)
+			+ (c1Dist[p5] < c2Dist[p5] and 16 or 0)
+		return allChars[charNr], c1, c2
 	end
-	return allChars[charNr], false
 end
 
 ---Draw a color buffer to the window
@@ -150,19 +155,9 @@ local function drawBuffer(buffer, window, wx, wy)
 				blitC2[x] = c
 				blitChar[x] = "\x80"
 			else
-				local c1, c2 = getColorsFromPixelGroup(p1, p2, p3, p4, p5, p6)
-				local char, swapColors = getCharFomPixelGroup(c1, c2, p1, p2, p3, p4, p5, p6)
-				if swapColors then
-					local cC2 = colorChar[c2]
-					local cC1 = colorChar[c1]
-					blitC1[x] = cC2
-					blitC2[x] = cC1
-				else
-					local cC2 = colorChar[c2]
-					local cC1 = colorChar[c1]
-					blitC1[x] = cC1
-					blitC2[x] = cC2
-				end
+				local char, c1, c2 = getCharFomPixelGroup(p1, p2, p3, p4, p5, p6)
+				blitC1[x] = colorChar[c1]
+				blitC2[x] = colorChar[c2]
 				blitChar[x] = char
 			end
 		end
