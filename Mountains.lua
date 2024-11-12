@@ -202,10 +202,6 @@ local function keyInput()
 
 		if event == "key" then
 			keysDown[key] = true
-			if key == keys.g then
-				highRes = not highRes
-				ThreeDFrame:highResMode(highRes)
-			end
 		elseif event == "key_up" then
 			keysDown[key] = nil
 		end
