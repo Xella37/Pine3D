@@ -28,8 +28,6 @@ local camera = {
 }
 
 local ThreeDFrame = Pine3D.newFrame()
-local highRes = true
-ThreeDFrame:highResMode(highRes)
 
 local function generateWorld(ThreeDFrame, genOptions)
 	local seed = genOptions.seed
